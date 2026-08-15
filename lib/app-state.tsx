@@ -25,13 +25,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      // Design prototype: a first launch with nothing in it shows only empty states, which makes
-      // the layouts impossible to judge. Seed the mock week instead. Clearable from the 나 tab,
-      // and this whole branch goes away once a real backend exists (see lib/mock.ts).
-      const current = await store.getState();
-      if (current.rooms.length === 0 && current.personalAlarms.length === 0) {
-        await store.loadMockData();
-      }
       await refresh();
       setReady(true);
     })();

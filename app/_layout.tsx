@@ -49,6 +49,7 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.paper },
         }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="welcome" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="room/new" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="room/join" options={{ headerShown: false, presentation: 'modal' }} />

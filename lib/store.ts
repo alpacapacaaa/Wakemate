@@ -23,7 +23,7 @@ import {
 
 // Bumped whenever the mock content changes shape: the seed only runs on an empty store, so a
 // stale saved copy would otherwise keep showing the previous prototype's data.
-const KEY = 'app_state_v12';
+const KEY = 'app_state_v13';
 
 function id(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -41,6 +41,7 @@ function emptyState(): AppState {
     rooms: [],
     personalAlarms: [],
     wakeRecords: [],
+    onboardedAt: null,
   };
 }
 
@@ -96,6 +97,11 @@ const operations = {
 
   async reset(): Promise<AppState> {
     return write(emptyState());
+  },
+
+  async completeOnboarding(): Promise<AppState> {
+    const s = await read();
+    return write({ ...s, onboardedAt: new Date().toISOString() });
   },
 
   async setMyName(name: string): Promise<AppState> {
