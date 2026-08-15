@@ -209,6 +209,8 @@ export function mockState(meId: string): AppState {
 
   return {
     me,
+    // Loading fixtures is not a first run — whoever asked for them has already seen the app.
+    onboardedAt: new Date().toISOString(),
     rooms: [study, gym, ...extra],
     personalAlarms: [
       {
