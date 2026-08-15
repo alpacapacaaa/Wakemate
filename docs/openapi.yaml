@@ -1,0 +1,489 @@
+openapi: 3.1.0
+
+info:
+  title: Wakemate API
+  version: 0.1.0
+  description: |
+    What the iOS client needs from the server. Companion to `docs/api-contract.md`, which explains
+    the reasoning — read that first, this is the machine-readable half.
+
+    **The server is never in the ringing path.** Alarms are scheduled on the device by iOS
+    AlarmKit and fire offline, in airplane mode, with the app killed. Do not build alarm
+    scheduling, snooze handling, or "send a notification at 07:00".
+
+    Three device-local fields must never cross this wire: `nativeAlarmId` (AlarmKit's id on one
+    device), `voiceSoundName` (the audio's filename on one device), and personal alarms (alarms
+    with no room, which never leave the phone).
+
+  license:
+    name: MIT
+    identifier: MIT
+
+servers:
+  - url: https://api.wakemate.app/v1
+    description: Placeholder — the real host is the backend's to choose.
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: auth
+    description: Identity. Everything else is scoped to the signed-in user.
+  - name: rooms
+    description: Who you wake up with, and each member's own schedule.
+  - name: voice
+    description: The audio itself, and who it wakes on which morning.
+  - name: mornings
+    description: The shared log of who actually got up.
+
+paths:
+  /auth/apple:
+    post:
+      tags: [auth]
+      summary: Exchange a Sign in with Apple token for a session
+      security: []
+      description: |
+        Apple returns a name only on the *first* authorisation. Store it then, or the user is
+        nameless forever.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identityToken]
+              properties:
+                identityToken: { type: string }
+      responses:
+        '200':
+          description: Session
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [userId, token]
+                properties:
+                  userId: { type: string, examples: ['usr_01H8XK'] }
+                  token: { type: string }
+                  name: { type: [string, "null"] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /me:
+    patch:
+      tags: [auth]
+      summary: Rename myself
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 40 }
+      responses:
+        '200':
+          description: Me
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /me/voice:
+    post:
+      tags: [voice]
+      summary: Upload my wake-up voice
+      description: |
+        **The audio must come back in a format iOS can ring.**
+
+        The client uploads CoreAudio Format (`.caf`), 16-bit linear PCM, mono, 44.1 kHz. iOS alert
+        sounds accept PCM / µ-law / a-law in `.caf`, `.aiff` or `.wav` only, 30 seconds maximum;
+        recordings are capped at 10s client-side.
+
+        Do not transcode to mp3 or AAC. Those play fine in any audio player and are silently
+        refused as an alarm sound. Compressing for storage is fine as long as `voiceUrl` serves
+        PCM.
+
+        Measured size: 578 KB for 6.5 s (~90 KB/s), so budget ~900 KB per voice.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, durationMs]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: .caf, 16-bit linear PCM, mono, 44.1 kHz
+                durationMs: { type: integer, examples: [7400] }
+      responses:
+        '201':
+          description: Stored
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [voiceUrl, voiceUpdatedAt]
+                properties:
+                  voiceUrl: { type: string, format: uri }
+                  voiceUpdatedAt: { type: string, format: date-time }
+        '413': { description: Too large }
+        '415': { description: Not a format iOS can ring }
+
+  /me/devices:
+    post:
+      tags: [auth]
+      summary: Register this device for push
+      description: |
+        Push is only ever used to keep data fresh — never to ring anything. Worth a silent push
+        when someone joins or leaves a room, a member records or replaces a voice, or assignments
+        change. Without it a new member's voice can take a day to arrive.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [apnsToken]
+              properties:
+                apnsToken: { type: string }
+      responses:
+        '204': { description: Registered }
+
+  /rooms:
+    get:
+      tags: [rooms]
+      summary: Every room I am in, with all members
+      responses:
+        '200':
+          description: Rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Room' }
+    post:
+      tags: [rooms]
+      summary: Create a room
+      description: |
+        Only a name. The person starting a room does not set anyone else's wake-up time — each
+        member keeps their own. The creator starts at 07:00 on weekdays.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 40 }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Room' }
+
+  /rooms/join:
+    post:
+      tags: [rooms]
+      summary: Join a room by its invite code
+      description: |
+        The endpoint the client is waiting on most. `store.joinRoomByCode` currently fakes it by
+        creating a *local* room carrying the code, so two phones with the same code are two
+        unrelated rooms. Nothing about the product works until this is real.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { $ref: '#/components/schemas/InviteCode' }
+      responses:
+        '200':
+          description: Joined
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Room' }
+        '404': { description: No room with that code }
+        '409': { description: Already a member }
+
+  /rooms/{roomId}:
+    parameters:
+      - $ref: '#/components/parameters/RoomId'
+    patch:
+      tags: [rooms]
+      summary: Rename a room
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 40 }
+      responses:
+        '200':
+          description: Renamed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Room' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /rooms/{roomId}/members/me:
+    parameters:
+      - $ref: '#/components/parameters/RoomId'
+    delete:
+      tags: [rooms]
+      summary: Leave a room
+      responses:
+        '204': { description: Left }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /rooms/{roomId}/members/me/alarm:
+    parameters:
+      - $ref: '#/components/parameters/RoomId'
+    put:
+      tags: [rooms]
+      summary: Set my own schedule in a room
+      description: |
+        Whole object, idempotent. The client always holds the full schedule, so a PATCH would only
+        add ways for the two sides to disagree.
+
+        Other members' schedules are read-only to me: the room shows everyone's time, and nobody
+        can move anyone else's alarm.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AlarmSchedule' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /rooms/{roomId}/assignments:
+    parameters:
+      - $ref: '#/components/parameters/RoomId'
+    get:
+      tags: [voice]
+      summary: Whose voice wakes me, per day
+      description: |
+        **The one rule that has to live on the server.** The client currently picks at random at
+        scheduling time, so every device picks separately and the alarm is scheduled with one voice
+        while the reveal screen re-rolls and may name someone else.
+
+        AlarmKit needs a concrete filename days in advance, so the pick must be decided ahead and
+        stay **stable** — a device that fetched Monday's voice must get the same answer tomorrow,
+        or the reveal lies.
+
+        Uniform-at-random among members who have recorded and are not me. Nice to have: avoid the
+        same voice two mornings running.
+
+        The client schedules a week ahead, downloads each `voiceUrl` once, and keeps it in the App
+        Group so AlarmKit can play it offline.
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date, examples: ['2026-08-15'] }
+        - name: days
+          in: query
+          schema: { type: integer, default: 7, minimum: 1, maximum: 14 }
+      responses:
+        '200':
+          description: Assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Assignment' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /rooms/{roomId}/wakes:
+    parameters:
+      - $ref: '#/components/parameters/RoomId'
+    get:
+      tags: [mornings]
+      summary: The room's morning log
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Wake records
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/WakeRecord' }
+    post:
+      tags: [mornings]
+      summary: Record that I got up
+      description: |
+        Written when the person taps **I'm up**, which can be minutes after the alarm and possibly
+        offline. Accept a `wokeAt` in the past, and make it **idempotent per (room, member, date)**
+        so a retry does not create a second morning.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, wokeAt]
+              properties:
+                date: { $ref: '#/components/schemas/LocalDate' }
+                wokeAt: { $ref: '#/components/schemas/LocalDateTime' }
+                wokenByMemberId:
+                  type: [string, "null"]
+                  description: Null if it rang with the default sound.
+      responses:
+        '200':
+          description: Recorded (or already was)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WakeRecord' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  parameters:
+    RoomId:
+      name: roomId
+      in: path
+      required: true
+      schema: { type: string }
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid token
+    NotFound:
+      description: No such room, or I am not in it
+
+  schemas:
+    LocalDate:
+      type: string
+      format: date
+      description: YYYY-MM-DD in the person's own local time.
+      examples: ['2026-08-15']
+
+    LocalDateTime:
+      type: string
+      description: |
+        Local wall clock with **no zone suffix**. An alarm at 07:00 means 07:00 wherever the phone
+        is; converting to UTC anywhere in this API will move somebody's morning.
+      examples: ['2026-08-15T06:58:00']
+
+    InviteCode:
+      type: string
+      pattern: '^[ABCDEFGHJKLMNPQRSTUVWXYZ2-9]{6}$'
+      description: Six characters, no 0/O/1/I — these get read aloud and typed.
+      examples: ['K7QM3P']
+
+    AlarmSchedule:
+      type: object
+      description: One person's own wake-up in one room.
+      required: [time, days, enabled, snoozeEnabled, snoozeMinutes]
+      properties:
+        time:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: 24h local wall clock.
+          examples: ['07:00']
+        days:
+          type: integer
+          minimum: 0
+          maximum: 127
+          description: |
+            Bitmask, bit0=Mon … bit6=Sun. 31 = weekdays, 96 = weekends, 127 = every day,
+            0 = one-shot.
+          examples: [31]
+        enabled: { type: boolean }
+        snoozeEnabled: { type: boolean }
+        snoozeMinutes:
+          type: integer
+          enum: [5, 9, 10, 15]
+
+    Me:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        voiceUrl: { type: [string, "null"], format: uri }
+        voiceDurationMs: { type: [integer, "null"] }
+
+    Member:
+      type: object
+      description: A person as everyone else in the room sees them.
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        voiceUrl:
+          type: [string, "null"]
+          format: uri
+          description: Null until they record.
+        voiceDurationMs: { type: [integer, "null"] }
+        voiceUpdatedAt:
+          type: [string, "null"]
+          format: date-time
+          description: So the client knows when to re-download.
+        alarm:
+          oneOf:
+            - $ref: '#/components/schemas/AlarmSchedule'
+            - type: 'null'
+          description: Null if they have not set one; nothing rings for them.
+
+    Room:
+      type: object
+      required: [id, name, code, createdAt, members]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        code: { $ref: '#/components/schemas/InviteCode' }
+        createdAt: { type: string, format: date-time }
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/Member' }
+
+    Assignment:
+      type: object
+      required: [date, wokenByMemberId]
+      properties:
+        date: { $ref: '#/components/schemas/LocalDate' }
+        wokenByMemberId:
+          type: [string, "null"]
+          description: |
+            Null when nobody in the room has recorded — the client falls back to the system alarm
+            sound rather than scheduling against a file that does not exist.
+        voiceUrl: { type: [string, "null"], format: uri }
+
+    WakeRecord:
+      type: object
+      description: One person, one morning, one room.
+      required: [roomId, date, memberId, wokeAt]
+      properties:
+        roomId: { type: string }
+        date: { $ref: '#/components/schemas/LocalDate' }
+        memberId: { type: string }
+        wokeAt: { $ref: '#/components/schemas/LocalDateTime' }
+        wokenByMemberId: { type: [string, "null"] }
