@@ -1,8 +1,10 @@
 node_modules/
 .expo/
 dist/
-ios/
-android/
+# The prebuild output at the project root only — an unanchored `ios/` also matched
+# modules/alarm-kit/ios, which kept the entire native module out of the repository.
+/ios/
+/android/
 *.log
 .DS_Store
 
