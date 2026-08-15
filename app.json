@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Wakemate",
+    "slug": "wakemate",
+    "scheme": "voicealarm",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "platforms": [
+      "ios"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.CHANGEME.voicealarm",
+      "usesAppleSignIn": true,
+      "deploymentTarget": "26.0",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.CHANGEME.voicealarm"
+        ]
+      },
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "내 목소리를 녹음해 다른 사람의 알람으로 전달하기 위해 마이크를 사용합니다",
+        "NSAlarmKitUsageDescription": "설정한 시각에 알람을 울리기 위해 필요합니다",
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-audio",
+      "expo-secure-store",
+      "expo-status-bar",
+      "expo-splash-screen",
+      "expo-apple-authentication",
+      [
+        "expo-notifications",
+        {
+          "enableBackgroundRemoteNotifications": true
+        }
+      ],
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
