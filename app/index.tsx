@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
 import { AppState as RNAppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -55,6 +55,9 @@ export default function WeekScreen() {
   }, [ready, state, rooms]);
 
   if (!ready || !state) return <Screen />;
+  // A first run has nothing to show and, more to the point, has never been told that a voice is
+  // what wakes somebody.
+  if (!state.onboardedAt) return <Redirect href="/welcome" />;
 
   // The deck shows one room's week. Falls back to the first room so the screen is never empty
   // just because nothing has been picked yet.

@@ -119,6 +119,12 @@ export type AppState = {
   rooms: Room[];
   personalAlarms: PersonalAlarm[];
   wakeRecords: WakeRecord[];
+  /**
+   * When the first run finished, or null if it has not. Tracked explicitly rather than guessed
+   * from "has a name" or "has a room", because someone who deliberately skipped both should not be
+   * asked again every launch.
+   */
+  onboardedAt: string | null;
 };
 
 export const SNOOZE_OPTIONS: SnoozeMinutes[] = [5, 9, 10, 15];
