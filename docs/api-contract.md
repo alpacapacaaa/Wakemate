@@ -5,7 +5,11 @@ source of truth for shapes is `lib/model.ts`, and `lib/store.ts` is the seam the
 replace — it is already async and call-shaped, so swapping it for `fetch` should not touch a
 single screen.
 
-**This supersedes `openapi.yaml` / `spec-v1.1.md`.** Those describe the previous product (anonymous
+`docs/openapi.yaml` is the machine-readable version of everything below — same endpoints, same
+shapes, lint-clean OpenAPI 3.1, ready for codegen or a mock server. This file is the one that
+explains *why*.
+
+**This supersedes the old `openapi.yaml` / `spec-v1.1.md` at the project root.** Those describe the previous product (anonymous
 strangers, one server-assigned alarm). Ignore them.
 
 ---
