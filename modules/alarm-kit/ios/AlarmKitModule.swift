@@ -104,6 +104,13 @@ public class AlarmKitModule: Module {
       return try await Self.scheduleAlarm(params: params)
     }
 
+    // Every alarm this app has with the system. Without it the app can only cancel ids it still
+    // remembers, so anything it loses track of — a crash mid-schedule, a reinstall, a debug build —
+    // rings forever with nothing able to stop it.
+    Function("listAlarmIds") { () -> [String] in
+      return try AlarmManager.shared.alarms.map { $0.id.uuidString }
+    }
+
     AsyncFunction("cancelAlarm") { (alarmId: String) in
       guard let uuid = UUID(uuidString: alarmId) else {
         throw AlarmKitModuleError.invalidAlarmId(alarmId)

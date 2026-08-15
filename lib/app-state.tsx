@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import type { AppState, PersonalAlarm, Room } from './model';
+import { cancelOrphanedAlarms } from './alarm';
 import { store } from './store';
 
 type Ctx = {
@@ -25,6 +26,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
+      // An alarm the app has lost the id for cannot be stopped from any screen, so sweep them
+      // before showing anything.
+      await cancelOrphanedAlarms(await store.getState()).catch(() => 0);
       await refresh();
       setReady(true);
     })();

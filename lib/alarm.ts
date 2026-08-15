@@ -1,7 +1,7 @@
 import { Alert, Linking } from 'react-native';
 
 import AlarmKitModule from '../modules/alarm-kit';
-import { myAlarmIn, type AlarmSchedule, type PersonalAlarm, type Room } from './model';
+import { myAlarmIn, type AlarmSchedule, type AppState, type PersonalAlarm, type Room } from './model';
 import { pickVoiceFor, store } from './store';
 import { parseAlarmTime } from './time';
 
@@ -132,6 +132,35 @@ export async function syncRoomAlarm(room: Room, myId: string): Promise<AlarmSync
 /** Personal alarms have no room and no roommate to borrow a voice from — system sound. */
 export async function syncPersonalAlarm(alarm: PersonalAlarm): Promise<AlarmSyncResult> {
   return schedule(alarm.nativeAlarmId, alarm, alarm.label || '알람', null);
+}
+
+/**
+ * Cancels every system alarm this app owns that no room or personal alarm points at.
+ *
+ * The app can only cancel ids it has stored, so anything it loses track of keeps ringing with
+ * nothing able to stop it — a crash between scheduling and saving the id, a reinstall over an old
+ * install, or a debug build that scheduled directly. Those alarms belong to nobody and are
+ * unreachable from any screen.
+ *
+ * Run at launch. Returns how many it removed.
+ */
+export async function cancelOrphanedAlarms(state: AppState): Promise<number> {
+  let live: string[];
+  try {
+    live = AlarmKitModule.listAlarmIds();
+  } catch {
+    return 0;
+  }
+
+  const owned = new Set(
+    [...state.rooms.map((r) => r.nativeAlarmId), ...state.personalAlarms.map((a) => a.nativeAlarmId)].filter(
+      (id): id is string => !!id
+    )
+  );
+
+  const orphans = live.filter((id) => !owned.has(id));
+  for (const id of orphans) await cancelNativeAlarm(id);
+  return orphans.length;
 }
 
 export async function cancelNativeAlarm(nativeAlarmId: string | null): Promise<void> {
