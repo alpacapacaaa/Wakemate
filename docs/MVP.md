@@ -145,17 +145,18 @@ iOS 26 실기기, 서울 시간대, 방 하나로 검증한다.
 
 ---
 
-## 서버 표면 — 오퍼레이션 15개
+## 서버 표면 — 오퍼레이션 16개
 
 ```
-POST   /me                            기기 등록 → { userId, token }
+POST   /me                            기기 등록 → { userId, token }.  토큰 만료 없음
 PATCH  /me                            { name }
 POST   /me/voice                      multipart .caf → { voiceUrl, voiceUpdatedAt }   변환 없음
+GET    /voice/{userId}                .caf 바이트 — Bearer 인증. 같은 방 사람만
 
 GET    /rooms                         내가 속한 방 전부 — 멤버·voiceUrl·각자 스케줄·ownerId
                                       포그라운드 갱신 경로. 여기서 사라지면 강퇴·탈퇴된 것
 POST   /rooms                         { name } → Room + code + codeExpiresAt.  만든 사람이 방장
-POST   /rooms/join                    { code } → Room.  만료 410, 없음 404, 정원 초과 409
+POST   /rooms/join                    { code } → Room.  만료 410, 없음 404, 정원·중복 409
 PATCH  /rooms/{id}                    { name } — 방 이름 변경
 POST   /rooms/{id}/code               코드 재발급 — 방장만. → 새 code + codeExpiresAt
 PUT    /rooms/{id}/owner              { memberId } 방장 이관 — 방장만
@@ -164,19 +165,24 @@ DELETE /rooms/{id}/members/me         나가기 — 방장이 후임 없이 나�
 DELETE /rooms/{id}/members/{memberId} 강퇴 — 방장만, 아니면 403
 
 GET    /rooms/{id}/assignments?from&days=7   날짜별 { wokenByMemberId, voiceUrl }
+                                      요청받을 때 없는 날짜만 뽑아 저장한다. 크론 없음
 POST   /rooms/{id}/wakes              기상 기록. (room, member, date) 멱등
-GET    /rooms/{id}/wakes?from&to      모닝 로그
+GET    /rooms/{id}/wakes?from&to      모닝 로그 — 방 전원의 기록
 ```
 
 나가기·강퇴 두 곳에서 **그 사람의 기상 기록을 지우고, 남은 사람 기록의 `wokenByMemberId`를 null로
-만든다.** 정원(5명)은 `POST /rooms/join`에서만 검사하면 된다.
+만든다.** 정원(5명)과 코드 만료는 `POST /rooms/join`에서만 검사하면 된다.
 
-`docs/openapi.yaml`에 이 15개가 그대로 있다 (+ `POST /me/devices`는 v1 제외 표시만 해두었다).
+`docs/openapi.yaml`에 이 16개가 그대로 있다 (+ `POST /me/devices`는 v1 제외 표시만 해두었다).
 
-테이블 다섯 개로 충분하다: `user`, `room`, `membership`(= 스케줄), `assignment`, `wake` + 목소리
-파일 저장소.
+테이블 다섯 개 + 목소리 파일 저장소. **DDL은 `docs/api-contract.md` §8에 있고, 유니크 제약 세 개가
+이 명세의 핵심 규칙**이다 — 코드 유일성, 배정 고정, 기상 기록 멱등. 앱 코드로 구현하면 동시 요청에서
+샌다.
 
-자세한 타입·에러·오프라인 규칙은 `docs/api-contract.md`.
+만드는 순서는 `docs/api-contract.md` §9. 1단계(엔드포인트 4개)만 끝나도 **초대 코드로 친구가 실제로
+방에 들어온다** — 지금 서버가 없어서 안 되는 것 중 가장 큰 것이다.
+
+자세한 타입·에러·오프라인 규칙과 해피패스 예제는 `docs/api-contract.md`.
 
 ---
 
@@ -185,17 +191,21 @@ GET    /rooms/{id}/wakes?from&to      모닝 로그
 1. **`lib/store.ts` 16개 함수를 fetch로 교체.** 화면은 한 줄도 건드리지 않는다 — 이 파일은 그러라고
    만든 시임이다.
 2. `pickVoiceFor` 제거 → 서버 배정 사용 (예약 시점과 ring 화면 모두)
-3. `Room.ownerId`·`Room.codeExpiresAt` 추가, `store.removeMember`, `store.transferOwner`
-4. 방 설정 화면: 강퇴(방장에게만 보임), **나가기 전 후임 선택 시트**(방장이고 혼자가 아닐 때),
+3. **목소리 파일 다운로드 경로가 아직 없다.** `voiceUrl`을 Bearer 토큰과 함께 받아 로컬 파일로 쓰고,
+   그 경로를 `AlarmKitModule.saveSoundToAppGroup`에 넘겨야 한다. 네이티브 쪽은 **파일 경로**를 받으므로
+   메모리에 든 바이트로는 안 되고, 파일로 쓰려면 `expo-file-system`을 **의존성에 다시 넣어야 한다**
+   (지금은 아무도 import하지 않아 제거된 상태이고, expo가 간접 의존해 설치만 되어 있다).
+4. `Room.ownerId`·`Room.codeExpiresAt` 추가, `store.removeMember`, `store.transferOwner`
+5. 방 설정 화면: 강퇴(방장에게만 보임), **나가기 전 후임 선택 시트**(방장이고 혼자가 아닐 때),
    코드의 남은 기간과 만료 상태, **새 코드 만들기**(방장에게만)
-5. 참여 화면: 410(만료)을 404(없는 코드)와 다른 문구로 — "코드가 만료됐어요"
-6. 목소리 교체 시 재예약, 403/404 응답 시 로컬 방 제거 + 알람 취소
-7. 안 쓰는 네이티브 의존성 정리 — `expo-apple-authentication`, `expo-notifications`,
-   `expo-secure-store`, `expo-file-system` (+ `app.json`의 `usesAppleSignIn`,
-   `UIBackgroundModes`). 첫 실기기 빌드에서 깨질 표면을 줄인다.
+6. 참여 화면: 410(만료)을 404(없는 코드)와 다른 문구로 — "코드가 만료됐어요"
+7. 목소리 교체 시 재예약, 403/404 응답 시 로컬 방 제거 + 알람 취소
 8. **App Group 음성 파일이 무한 누적된다** — `cleanupOldSounds`를 JS에서 아무도 부르지 않고, 부른다
    해도 파일명 규칙이 어긋나 있다 (JS는 `voice_<base36>.caf`, Swift는 `voice_YYYYMMDD.caf` 8자리만
    인식).
+
+안 쓰는 네이티브 의존성 정리(`expo-apple-authentication`, `expo-notifications`,
+`expo-secure-store` + `app.json`의 `usesAppleSignIn`·`UIBackgroundModes`)는 완료했다.
 
 ---
 
