@@ -38,8 +38,9 @@ npm run sim         # 시뮬레이터에서 앱 실행
 ## 문서
 
 - `docs/MVP.md` — v1 범위. 다른 문서와 어긋나면 이게 이긴다
-- `docs/api-contract.md` — 서버 계약과 그 이유. 구현 순서·DDL·해피패스 포함
-- `docs/openapi.yaml` — 같은 계약의 기계용 버전
+- `docs/api-implement.md` — **서버를 만들 사람이 볼 것.** 만들어야 하는 것만 모은 작업 시트
+- `docs/api-contract.md` — 같은 계약에 *왜 그런지*까지. DDL·해피패스 포함
+- `docs/openapi.yaml` — 기계용 버전. 목서버·코드젠에 그대로 쓸 수 있다
 - `docs/alarmkit.md` — 알람이 실제로 울리는 부분. 확인된 API 사실과 실기기에서만 답이 나오는 것들
 
 ## 참고

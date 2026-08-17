@@ -1,4 +1,4 @@
-**실 구현은 §9 「구현 순서」부터 읽으면 됩니다.**
+**실 구현은 §9 「구현 순서」부터 읽으면 됩니다.** 만들 것만 모은 작업 시트는 `api-implement.md`.
 
 ---
 
@@ -447,9 +447,10 @@ CREATE TABLE wake (
 
 ## 9. 구현 순서
 
-한 번에 15개를 만들지 말 것. **1단계만 끝나도 앱이 지금 못 하는 가장 큰 일이 된다.**
+한 번에 16개를 만들지 말 것. **1단계만 끝나도 앱이 지금 못 하는 가장 큰 일이 된다.**
+단계별 상세는 `api-implement.md`에 같은 순서로 정리해뒀다.
 
-### 1단계 — 친구가 실제로 방에 들어온다 (엔드포인트 4개)
+### 1단계 — 친구가 실제로 방에 들어온다 (엔드포인트 5개)
 
 ```
 POST /me · PATCH /me · POST /rooms · POST /rooms/join · GET /rooms
@@ -470,7 +471,7 @@ PUT /rooms/{id}/members/me/alarm · POST /rooms/{id}/wakes · GET /rooms/{id}/wa
 ### 3단계 — 목소리로 깬다 (엔드포인트 3개)
 
 ```
-POST /me/voice · GET {voiceUrl} · GET /rooms/{id}/assignments
+POST /me/voice · GET /voice/{userId} · GET /rooms/{id}/assignments
 ```
 
 가장 까다로운 단계다 — 포맷(§5)과 고정 규칙(§2)이 여기 있다. 배정이 불안정하면 기상 화면이 거짓말을
