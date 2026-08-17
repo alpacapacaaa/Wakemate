@@ -24,6 +24,9 @@ const DAY_COUNT = 7;
  * Off is drawn as a pale grey card rather than a faded colour one, because the deck's colours are
  * identity: a washed-out green still reads as "Monday's colour, badly rendered", where grey reads
  * as "off".
+ *
+ * Today wears an outline in a deeper shade of its own colour, so the mark belongs to that card
+ * rather than being a foreign line laid over it.
  */
 export function DayCard({
   dayName,
@@ -97,8 +100,8 @@ export function DayCard({
         style={({ pressed }) => [
           styles.card,
           { backgroundColor: on ? color.base : colors.cardOff },
+          isToday && { borderColor: on ? color.deep : colors.cardOffDeep },
           isLast && styles.lastCard,
-          isToday && (on ? styles.todayOn : styles.todayOff),
           pressed && styles.pressed,
         ]}>
         <View style={[styles.label, !on && styles.off]}>
@@ -137,15 +140,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   lastCard: { height: 168, alignItems: 'flex-start', paddingTop: 24, paddingBottom: 0 },
-  /**
-   * Today wears a thin outline — the same off-white as the arrow circles, which reads cleanly on
-   * all seven colours. It vanishes on the pale grey of a day that is switched off, so that one case
-   * takes ink instead; either way today is always marked.
-   *
-   * Its bottom edge sits under the next card, so this reads as a top and sides, not a full box.
-   */
-  todayOn: { borderColor: colors.paperLight },
-  todayOff: { borderColor: colors.ink },
   pressed: { opacity: 0.88 },
   /** Only while dragging, so the deck stays flat at rest. */
   lifted: {

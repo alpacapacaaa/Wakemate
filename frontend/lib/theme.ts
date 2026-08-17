@@ -30,13 +30,17 @@ export const colors = {
   lineStrong: 'rgba(23,22,18,0.22)',
   /** A day with no alarm: pale, grey, unmistakably not one of the seven colours. */
   cardOff: '#e5e3dc',
+  /** `cardOff` deepened — today's outline on a day that is switched off. */
+  cardOffDeep: '#a09f9a',
   alert: '#b3402f',
   alertSoft: '#f4e0da',
 } as const;
 
 /**
  * The reference's seven card colours, sampled in order (Monday → Sunday). `tint` fills pills
- * sitting on a card, `deep` is text that must read against `tint`.
+ * sitting on a card, `deep` is text that must read against `tint` — and it doubles as today's
+ * outline on a card of the same colour, where it lands 2.2–3.1 contrast against `base`: plainly a
+ * darker version of that card rather than a new colour.
  */
 export const CARD_COLORS = [
   { name: 'olive', base: '#8fa96c', tint: '#bccbA5', deep: '#586b3c' },
