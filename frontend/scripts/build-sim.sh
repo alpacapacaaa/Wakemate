@@ -28,10 +28,20 @@ fi
 echo "▸ pod install"
 npx pod-install
 
-echo "▸ build  (${DEVICE})"
+# Read the scheme off the generated project instead of hardcoding it. `expo prebuild` names the
+# workspace after app.json's `name`, so a rename — or a `--clean` regeneration on a project that
+# predates one — silently changes it, and a hardcoded name then fails with "does not exist".
+WORKSPACE="$(ls -d ios/*.xcworkspace 2>/dev/null | head -1)"
+if [ -z "$WORKSPACE" ]; then
+  echo "ios/*.xcworkspace 가 없습니다. 'npx expo prebuild --platform ios' 를 먼저 실행하세요." >&2
+  exit 1
+fi
+SCHEME="$(basename "$WORKSPACE" .xcworkspace)"
+
+echo "▸ build  ${SCHEME}  (${DEVICE})"
 xcodebuild \
-  -workspace ios/app.xcworkspace \
-  -scheme app \
+  -workspace "$WORKSPACE" \
+  -scheme "$SCHEME" \
   -configuration Debug \
   -sdk iphonesimulator \
   -destination "id=${UDID}" \
@@ -39,6 +49,11 @@ xcodebuild \
   build
 
 echo "▸ install"
-xcrun simctl install "$UDID" ios/build/Build/Products/Debug-iphonesimulator/app.app
+# simctl install needs the device booted — on a shut-down simulator it fails with
+# "Unable to lookup in current state: Shutdown" after the build has already succeeded.
+if ! xcrun simctl list devices booted | grep -q "$UDID"; then
+  xcrun simctl boot "$UDID"
+fi
+xcrun simctl install "$UDID" "ios/build/Build/Products/Debug-iphonesimulator/${SCHEME}.app"
 
 echo "완료. 'npm run sim' 으로 실행하세요."

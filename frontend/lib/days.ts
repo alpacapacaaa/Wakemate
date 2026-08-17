@@ -1,5 +1,5 @@
-// spec-v1.1.md §1.2 — bit0=월(1) bit1=화(2) ... bit6=일(64). 평일=31, 주말=96, 매일=127.
-// 0 is rejected by the server with VALIDATION_ERROR (1회성 알람 MVP 미지원).
+// bit0=월(1) bit1=화(2) ... bit6=일(64). 평일=31, 주말=96, 매일=127.
+// 0 = 반복 없음, 즉 1회성 알람. AlarmKit 쪽에서 `.weekly([])`로 표현된다.
 
 export const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'] as const;
 

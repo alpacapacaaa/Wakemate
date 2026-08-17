@@ -3,7 +3,7 @@ import { DEFAULT_ALARM, type AlarmSchedule, type AppState, type Member, type Roo
 /**
  * Mock content for the design prototype.
  *
- * There is no backend yet (see PIVOT.md), so friends cannot actually join a room and no real
+ * There is no backend yet (see `docs/MVP.md`), so friends cannot actually join a room and no real
  * morning data can exist. Every screen would otherwise be an empty state, which makes the design
  * impossible to judge. This fills the app with a plausible week so the layouts can be evaluated
  * against realistic content.

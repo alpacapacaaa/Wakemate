@@ -37,25 +37,21 @@ tags:
     description: The shared log of who actually got up.
 
 paths:
-  /auth/apple:
+  /me:
     post:
       tags: [auth]
-      summary: Exchange a Sign in with Apple token for a session
+      summary: Register this device and get a session
       security: []
       description: |
-        Apple returns a name only on the *first* authorisation. Store it then, or the user is
-        nameless forever.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [identityToken]
-              properties:
-                identityToken: { type: string }
+        v1 has no login. The device asks once, keeps the token, and the returned `userId` is this
+        person's `Member.id` everywhere. The name arrives in the `PATCH` right after, from
+        onboarding.
+
+        A reinstall loses the account — known and accepted for v1. When Sign in with Apple lands it
+        must be able to *attach* to a user created this way rather than replace it, so keep the user
+        row identity-agnostic.
       responses:
-        '200':
+        '201':
           description: Session
           content:
             application/json:
@@ -65,10 +61,6 @@ paths:
                 properties:
                   userId: { type: string, examples: ['usr_01H8XK'] }
                   token: { type: string }
-                  name: { type: [string, "null"] }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-
-  /me:
     patch:
       tags: [auth]
       summary: Rename myself
@@ -137,9 +129,13 @@ paths:
       tags: [auth]
       summary: Register this device for push
       description: |
+        **Deferred — not in v1.** Kept here for the shape only; see `MVP.md`. The client has no
+        token-registration path and `expo-notifications` is being removed.
+
         Push is only ever used to keep data fresh — never to ring anything. Worth a silent push
-        when someone joins or leaves a room, a member records or replaces a voice, or assignments
-        change. Without it a new member's voice can take a day to arrive.
+        when someone joins, leaves or is removed from a room, a member replaces a voice, or
+        assignments change. Without it a replaced voice can take a day to arrive and a removed
+        member can ring once more.
       requestBody:
         required: true
         content:
@@ -194,6 +190,10 @@ paths:
         The endpoint the client is waiting on most. `store.joinRoomByCode` currently fakes it by
         creating a *local* room carrying the code, so two phones with the same code are two
         unrelated rooms. Nothing about the product works until this is real.
+
+        Codes expire 7 days after issue, and rooms hold at most 5 people — both are checked here and
+        nowhere else. Keep 404 and 410 distinct: "no such code" and "this code has expired" are
+        different problems for the person typing it, and the client says different things.
       requestBody:
         required: true
         content:
@@ -210,7 +210,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Room' }
         '404': { description: No room with that code }
-        '409': { description: Already a member }
+        '409': { description: 'Already a member, or the room already has 5' }
+        '410': { description: That code has expired }
 
   /rooms/{roomId}:
     parameters:
@@ -235,14 +236,100 @@ paths:
               schema: { $ref: '#/components/schemas/Room' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /rooms/{roomId}/code:
+    parameters:
+      - $ref: '#/components/parameters/RoomId'
+    post:
+      tags: [rooms]
+      summary: Reissue the invite code
+      description: |
+        Owner only. Returns a fresh code and a fresh 7-day expiry; the old code stops working
+        immediately. This is the answer to a leaked code, which is why it is restricted the same way
+        removing a member is.
+      responses:
+        '200':
+          description: New code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, codeExpiresAt]
+                properties:
+                  code: { $ref: '#/components/schemas/InviteCode' }
+                  codeExpiresAt: { type: string, format: date-time }
+        '403': { description: Not the owner }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /rooms/{roomId}/owner:
+    parameters:
+      - $ref: '#/components/parameters/RoomId'
+    put:
+      tags: [rooms]
+      summary: Hand the room over to another member
+      description: |
+        Owner only, and `memberId` must already be in the room.
+
+        Ownership never moves on its own — an owner who wants to leave calls this first. Keeping it
+        separate from leaving also lets an owner hand the room over and stay.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberId]
+              properties:
+                memberId: { type: string }
+      responses:
+        '200':
+          description: Handed over
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Room' }
+        '403': { description: Not the owner }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /rooms/{roomId}/members/me:
     parameters:
       - $ref: '#/components/parameters/RoomId'
     delete:
       tags: [rooms]
       summary: Leave a room
+      description: |
+        Deletes this person's `WakeRecord`s for the room and nulls `wokenByMemberId` on the records
+        of anyone they woke. Leaving leaves no trace.
+
+        An owner cannot leave a room that still has other members — **409** until they name a
+        successor through `PUT /rooms/{roomId}/owner`. An owner who is the last member leaves
+        normally and the room is deleted.
       responses:
         '204': { description: Left }
+        '409': { description: Owner must hand the room over first }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /rooms/{roomId}/members/{memberId}:
+    parameters:
+      - $ref: '#/components/parameters/RoomId'
+      - name: memberId
+        in: path
+        required: true
+        schema: { type: string }
+    delete:
+      tags: [rooms]
+      summary: Remove someone from a room
+      description: |
+        Only `ownerId` may remove another member; anyone else gets 403.
+
+        Same erasure as leaving: delete their `WakeRecord`s for this room and null
+        `wokenByMemberId` on the records of anyone they woke.
+
+        There is no push in v1, so the removed phone finds out only when it next asks — `GET /rooms`
+        on foreground. From here on this room must be absent from that list, and its own endpoints
+        must answer 403 or 404 for that user; the client then deletes the room locally and cancels
+        its alarm. Until that next foreground the removed phone can still ring once for this room.
+      responses:
+        '204': { description: Removed }
+        '403': { description: Not the owner }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /rooms/{roomId}/members/me/alarm:
@@ -455,14 +542,28 @@ components:
 
     Room:
       type: object
-      required: [id, name, code, createdAt, members]
+      description: At most 5 members; the sixth join is refused.
+      required: [id, name, code, codeExpiresAt, ownerId, createdAt, members]
       properties:
         id: { type: string }
         name: { type: string }
         code: { $ref: '#/components/schemas/InviteCode' }
+        codeExpiresAt:
+          type: string
+          format: date-time
+          description: |
+            7 days after the code was issued. The client shows the time left and, once past, offers
+            the owner a reissue instead of a dead code.
+        ownerId:
+          type: string
+          description: |
+            Whoever created the room. The only member who can remove someone, reissue the code, or
+            hand the room over. Ownership never moves on its own.
         createdAt: { type: string, format: date-time }
         members:
           type: array
+          maxItems: 5
+          description: Join order.
           items: { $ref: '#/components/schemas/Member' }
 
     Assignment:

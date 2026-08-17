@@ -56,10 +56,11 @@ enum AlarmKitModuleError: Error, CustomStringConvertible {
 // MARK: - Module
 
 public class AlarmKitModule: Module {
-  // App Group ID — must match spec-v1.1.md §3 (팀 도메인 확정 전까지 CHANGEME).
-  // Kept in sync with app.json ios.entitlements "com.apple.security.application-groups" by the
-  // app config (see app.config.ts). If these two ever diverge, file writes will silently fail
-  // because the container URL will resolve to nil.
+  // App Group ID. **Must match `app.json` → ios.entitlements
+  // "com.apple.security.application-groups" exactly**, and nothing enforces that — if the two
+  // diverge, `containerURL(forSecurityApplicationGroupIdentifier:)` returns nil and every sound
+  // file write fails *silently*, so alarms fall back to the default tone with no error anywhere.
+  // Both are still placeholders; change them together (`docs/alarmkit.md`).
   private static let appGroupId = "group.com.CHANGEME.voicealarm"
 
   public func definition() -> ModuleDefinition {
@@ -84,10 +85,10 @@ public class AlarmKitModule: Module {
     // was deprecated in iOS 26.1 ("stopButton is deprecated and will no longer be used" — confirmed
     // via Apple's live doc JSON on 2026-08-13). We therefore use the non-deprecated
     // init(title:secondaryButton:secondaryButtonBehavior:), which has NO stopButton parameter.
-    // This means the spec's custom stop-button label ("일어났어요") may no longer be settable through
+    // This means a custom stop-button label ("일어났어요") may no longer be settable through
     // AlarmPresentation.Alert on current (26.1+) devices — the system may render its own fixed stop
     // control instead, with the actual tap-behavior wired via `stopIntent` below regardless of label.
-    // UNVERIFIED on real device — flag in SPIKE.md and re-check Xcode 26 headers/release notes.
+    // UNVERIFIED on a real device — one of the open items in `docs/alarmkit.md`.
     AsyncFunction("scheduleDailyAlarm") { (params: ScheduleAlarmParams) -> String in
       return try await Self.scheduleAlarm(params: params)
     }
@@ -120,8 +121,9 @@ public class AlarmKitModule: Module {
 
     // MARK: App Group file storage (Library/Sounds)
     //
-    // spec-v1.1.md §3: caf 저장 경로 = App Group 컨테이너 `/Library/Sounds/{caf_filename}`.
-    // Filenames are server-assigned (voice_YYYYMMDD.caf) — never invented client-side.
+    // AlarmKit plays an alert sound by filename out of the App Group container's `Library/Sounds`,
+    // so a recording has to be copied there before it can ring at all. Whether that actually works
+    // on a device is the open question in `docs/alarmkit.md`.
 
     AsyncFunction("saveSoundToAppGroup") { (sourceFilePath: String, filename: String) -> String in
       let destURL = try Self.soundsDirectoryURL().appendingPathComponent(filename)
@@ -139,8 +141,12 @@ public class AlarmKitModule: Module {
     }
 
     // Deletes cached .caf files whose date-derived filename is older than `keepAfterDate`
-    // (YYYY-MM-DD), per spec-v1.1.md §1.5: "배정일 +2일 지난 caf를 로컬에서도 정리." Bundle seed
-    // files (seed_01.caf..) are never touched — only files matching voice_YYYYMMDD.caf.
+    // (YYYY-MM-DD), matching only `voice_YYYYMMDD.caf`.
+    //
+    // ⚠️ Dead as written: nothing in JS calls this, and `saveVoiceAsAlarmSound` names its files
+    // `voice_<base36>.caf`, which `extractDate(fromVoiceFilename:)` below does not recognise. So
+    // every replaced voice accumulates in the container forever. Settle on one naming scheme and
+    // call this at launch — see `docs/MVP.md`, "클라이언트에 남은 일".
     AsyncFunction("cleanupOldSounds") { (keepAfterDate: String) -> [String] in
       let dir = try Self.soundsDirectoryURL()
       let files = try FileManager.default.contentsOfDirectory(atPath: dir.path)
@@ -244,7 +250,7 @@ public class AlarmKitModule: Module {
     }
   }
 
-  // bit0=월(1)...bit6=일(64) — spec-v1.1.md §1.2
+  // bit0=월(1)...bit6=일(64). 0 = 반복 없음 → `.weekly([])`.
   private static func weekdays(fromBitmask mask: Int) -> [Locale.Weekday] {
     var days: [Locale.Weekday] = []
     if mask & 1 != 0 { days.append(.monday) }
