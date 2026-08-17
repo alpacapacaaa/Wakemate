@@ -16,9 +16,12 @@ export function Eyebrow({ children }: { children: React.ReactNode }) {
   return <Text style={styles.eyebrow}>{children}</Text>;
 }
 
-/** The chunky editorial headline the reference is built around. */
-export function Display({ children, small }: { children: React.ReactNode; small?: boolean }) {
-  return <Text style={small ? styles.displaySm : styles.display}>{children}</Text>;
+/**
+ * The chunky editorial headline the reference is built around. `kr` keeps Korean text in Gothic A1
+ * — the default face is Figtree, which has no Hangul and would fall back to a thin system font.
+ */
+export function Display({ children, small, kr }: { children: React.ReactNode; small?: boolean; kr?: boolean }) {
+  return <Text style={small ? styles.displaySm : kr ? styles.displayKr : styles.display}>{children}</Text>;
 }
 
 export function Title({ children }: { children: React.ReactNode }) {
@@ -142,6 +145,7 @@ const styles = StyleSheet.create({
 
   eyebrow: { ...type.eyebrow, color: colors.inkSoft },
   display: { ...type.display, color: colors.ink },
+  displayKr: { ...type.displayKr, color: colors.ink },
   displaySm: { ...type.displaySm, color: colors.ink },
   heading: { ...type.heading, color: colors.ink },
   body: { ...type.body, color: colors.ink },

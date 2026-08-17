@@ -24,5 +24,10 @@ export function parseInviteCode(input: string): string | null {
 }
 
 export function inviteMessage(roomName: string, code: string): string {
-  return `Join "${roomName}" on Voice Alarm — code ${code.toUpperCase()}\n${buildInviteLink(code)}`;
+  return `Wakemate에서 같이 일어나요 — "${roomName}" 초대 코드 ${code.toUpperCase()}\n${buildInviteLink(code)}`;
+}
+
+/** Whole days until a room's code stops working; 0 or less means it already has. */
+export function codeDaysLeft(codeExpiresAt: string): number {
+  return Math.ceil((new Date(codeExpiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
 }
