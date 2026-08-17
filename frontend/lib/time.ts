@@ -1,4 +1,7 @@
-/** KST "HH:MM" (spec-v1.1.md §1.1). Server-guaranteed, but never trusted at the native boundary. */
+/**
+ * "HH:MM", 24h, **device-local wall clock** — 07:00 means 07:00 wherever the phone is, never a UTC
+ * instant (`docs/api-contract.md` §3). Never trusted at the native boundary whatever its source.
+ */
 export type ParsedTime = { hour: number; minute: number };
 
 export const DEFAULT_TIME = '07:00';

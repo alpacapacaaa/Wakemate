@@ -1,8 +1,5 @@
 /**
- * Domain model.
- *
- * PIVOT (2026-08-13) — see PIVOT.md. This supersedes spec-v1.1.md / openapi.yaml v1.1 (an
- * anonymous stranger-matching app with one server-assigned alarm).
+ * Domain model. Scope and the decisions behind it: `docs/MVP.md`.
  *
  * The shape follows Setlog: a small private room of friends is the unit. The room is *who* you wake
  * up with, not when — each member keeps their own time and days, because a study group at 07:00 and

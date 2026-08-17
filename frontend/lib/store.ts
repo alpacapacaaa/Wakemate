@@ -14,7 +14,7 @@ import {
 } from './model';
 
 /**
- * Local stand-in for the backend that does not exist yet (see PIVOT.md).
+ * Local stand-in for the backend that does not exist yet. What it will owe us: `docs/api-contract.md`.
  *
  * Every function is async and shaped like an API call on purpose: when real endpoints land this
  * module is replaced with fetch calls and no screen changes. Business rules a server would own are

@@ -111,7 +111,7 @@ async function schedule(
  * The random pick happens here, at scheduling time, because AlarmKit needs a concrete filename up
  * front — it cannot ask the app for a sound when the alarm fires. Re-scheduling (any edit) is
  * therefore what re-rolls which roommate wakes you. Making it a genuinely different friend each
- * morning needs the server to fix tomorrow's voice nightly; see PIVOT.md.
+ * morning needs the server to fix tomorrow's voice ahead of time; see `docs/MVP.md`.
  *
  * A room with no usable voice still schedules, with a bundled seed sound — an alarm that fails to
  * ring is the one unacceptable outcome.

@@ -30,7 +30,7 @@ export default function RingScreen() {
   const color = cardColorAt(Math.max(index, 0));
 
   // Re-rolled for the in-app replay; matching the voice that actually rang needs the server to own
-  // the pick (see PIVOT.md).
+  // the pick, per (room, member, date) — `docs/MVP.md`.
   const [speaker] = useState(() => pickVoiceFor(room, state?.me.id ?? ''));
   const [revealed, setRevealed] = useState(false);
   const [recorded, setRecorded] = useState(false);
