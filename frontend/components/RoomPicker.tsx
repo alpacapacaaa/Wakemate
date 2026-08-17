@@ -2,7 +2,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import { myAlarmIn, type Room } from '../lib/model';
 import { cardColorAt, colors, radius, spacing, tabular, type } from '../lib/theme';
-import { fmtDaysEN } from '../lib/week';
+import { fmtDaysKR } from '../lib/week';
 
 /**
  * The header pill's dropdown: which room's week the deck is showing.
@@ -28,7 +28,7 @@ export function RoomPicker({
 }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="닫기" />
       <View style={styles.sheet} pointerEvents="box-none">
         <View style={styles.card}>
           <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
@@ -49,7 +49,7 @@ export function RoomPicker({
                       {room.name}
                     </Text>
                     <Text style={styles.meta} numberOfLines={1}>
-                      {room.members.length} people · {mine ? fmtDaysEN(mine.days) : 'no alarm'}
+                      {room.members.length}명 · {mine ? fmtDaysKR(mine.days) : '알람 없음'}
                     </Text>
                   </View>
                   <Text style={[styles.time, tabular]}>{mine?.enabled ? mine.time : '—'}</Text>
@@ -88,7 +88,8 @@ const styles = StyleSheet.create({
   rowPressed: { backgroundColor: colors.paperDeep },
   swatch: { width: 26, height: 26, borderRadius: 8 },
   rowText: { flex: 1, gap: 1 },
-  name: { ...type.heading, fontSize: 17, color: colors.ink },
+  // headingKr: room names are user content and can be Korean; Figtree has no Hangul.
+  name: { ...type.headingKr, fontSize: 17, color: colors.ink },
   meta: { ...type.caption, fontSize: 12, color: colors.inkSoft },
   time: { ...type.heading, fontSize: 16, color: colors.ink },
   check: { ...type.label, color: colors.ink },

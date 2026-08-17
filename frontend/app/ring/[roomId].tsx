@@ -31,7 +31,7 @@ export default function RingScreen() {
 
   // Re-rolled for the in-app replay; matching the voice that actually rang needs the server to own
   // the pick, per (room, member, date) — `docs/MVP.md`.
-  const [speaker] = useState(() => pickVoiceFor(room, state?.me.id ?? ''));
+  const [speaker] = useState(() => pickVoiceFor(room, state?.me.id ?? '', state?.blockedIds ?? []));
   const [revealed, setRevealed] = useState(false);
   const [recorded, setRecorded] = useState(false);
 
@@ -65,24 +65,24 @@ export default function RingScreen() {
         <GlassCard contentStyle={styles.glassContent}>
           {speaker ? (
             <>
-              <Text style={styles.whoLabel}>WOKEN BY</Text>
+              <Text style={styles.whoLabel}>오늘의 목소리</Text>
               <Text style={styles.who}>{revealed ? speaker.name : '???'}</Text>
               <View style={styles.glassActions}>
-                <Button label="Replay" variant="onCard" onPress={() => player.play()} />
-                {!revealed && <Button label="Reveal" variant="onCard" onPress={() => setRevealed(true)} />}
+                <Button label="다시 듣기" variant="onCard" onPress={() => player.play()} />
+                {!revealed && <Button label="누군지 보기" variant="onCard" onPress={() => setRevealed(true)} />}
               </View>
             </>
           ) : (
             <>
-              <Text style={styles.whoLabel}>THIS MORNING</Text>
-              <Text style={styles.whoSmall}>Default sound — voices join in as friends record.</Text>
+              <Text style={styles.whoLabel}>이번 아침</Text>
+              <Text style={styles.whoSmall}>기본음으로 울렸어요 — 친구가 녹음하면 목소리로 바뀌어요.</Text>
             </>
           )}
         </GlassCard>
       </View>
 
       <View style={styles.footer}>
-        <Button label="I'm up" variant="primary" onPress={() => void wakeUp()} />
+        <Button label="일어났어요" variant="primary" onPress={() => void wakeUp()} />
       </View>
     </Screen>
   );
@@ -97,8 +97,10 @@ const styles = StyleSheet.create({
 
   middle: { paddingHorizontal: spacing.lg },
   glassContent: { padding: spacing.xl, gap: spacing.sm, alignItems: 'center' },
-  whoLabel: { ...type.eyebrow, color: colors.inkSoft },
-  who: { ...type.display, fontSize: 40, lineHeight: 46, color: colors.ink },
+  // eyebrowKr, not eyebrow: Korean label, and the eyebrow face has no Hangul.
+  whoLabel: { ...type.eyebrowKr, color: colors.inkSoft },
+  // displayKr: the revealed name is user content and usually Korean; Figtree has no Hangul.
+  who: { ...type.displayKr, fontSize: 38, color: colors.ink },
   whoSmall: { ...type.body, color: colors.ink, textAlign: 'center' },
   glassActions: { flexDirection: 'row', gap: spacing.md, paddingTop: spacing.sm },
 

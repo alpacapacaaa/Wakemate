@@ -12,7 +12,7 @@ import { useAppState } from '../lib/app-state';
 import { myAlarmIn, type PersonalAlarm } from '../lib/model';
 import { store } from '../lib/store';
 import { cardColorAt, colors, radius, spacing, tabular, type } from '../lib/theme';
-import { fmtDaysEN } from '../lib/week';
+import { fmtDaysKR } from '../lib/week';
 
 /**
  * App settings — everything the burger owns, and the only screen that is a list rather than a
@@ -32,10 +32,10 @@ export default function SettingsScreen() {
   const personals = [...state.personalAlarms].sort((a, b) => a.time.localeCompare(b.time));
 
   function confirmReset() {
-    Alert.alert('Clear everything?', 'Rooms, alarms and your voice will be gone for good.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('전부 지울까요?', '방, 알람, 녹음한 목소리가 이 기기에서 사라져요. 되돌릴 수 없어요.', [
+      { text: '취소', style: 'cancel' },
       {
-        text: 'Clear',
+        text: '지우기',
         style: 'destructive',
         onPress: async () => {
           await mutate(() => store.reset());
@@ -55,26 +55,25 @@ export default function SettingsScreen() {
   return (
     <Screen>
       <View style={styles.topRow}>
-        <RoundButton glyph="✕" label="Close" size={38} onPress={() => router.back()} />
+        <RoundButton glyph="✕" label="닫기" size={38} onPress={() => router.back()} />
       </View>
 
       <ScrollView style={styles.fill} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headline}>
-          <Display>Settings</Display>
-          <Text style={styles.sub}>Your name, your voice, your alarms</Text>
+          <Display kr>설정</Display>
         </View>
 
         <View style={styles.sheet}>
           <View style={styles.group}>
-            <Text style={styles.groupLabel}>You</Text>
+            <Text style={styles.groupLabel}>나</Text>
 
             <View style={styles.stack}>
-              <Text style={styles.rowLabel}>Name</Text>
+              <Text style={styles.rowLabel}>이름</Text>
               <TextInput
                 value={name}
                 onChangeText={setName}
                 onEndEditing={() => void mutate(() => store.setMyName(name.trim() || 'You'))}
-                placeholder="What friends see"
+                placeholder="친구에게 보이는 이름"
                 placeholderTextColor={colors.lineStrong}
                 style={styles.input}
                 returnKeyType="done"
@@ -82,7 +81,7 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.stack}>
-              <Text style={styles.rowLabel}>Your voice</Text>
+              <Text style={styles.rowLabel}>내 목소리</Text>
               {state.me.voiceUri ? (
                 <>
                   <View>
@@ -97,38 +96,39 @@ export default function SettingsScreen() {
                     />
                   </View>
                   <Text style={styles.meta}>
-                    {state.me.voiceDurationMs ? `${(state.me.voiceDurationMs / 1000).toFixed(1)}s` : 'Recorded'}
-                    {' · '}rings in {rooms.length} room{rooms.length === 1 ? '' : 's'}
+                    {state.me.voiceDurationMs ? `${(state.me.voiceDurationMs / 1000).toFixed(1)}초` : '녹음됨'}
+                    {' · '}
+                    {rooms.length}개 방에서 울려요
                   </Text>
                   <View style={styles.actions}>
-                    <Button label="Listen" variant="quiet" onPress={() => player.play()} />
-                    <Button label="Re-record" variant="quiet" onPress={() => router.push('/record')} />
+                    <Button label="들어보기" variant="quiet" onPress={() => player.play()} />
+                    <Button label="다시 녹음" variant="quiet" onPress={() => router.push('/record')} />
                   </View>
                 </>
               ) : (
                 <>
-                  <Text style={styles.meta}>Record 5–10 seconds and it becomes someone&apos;s alarm.</Text>
-                  <Button label="Record your voice" variant="primary" onPress={() => router.push('/record')} />
+                  <Text style={styles.meta}>5–10초 녹음하면 누군가의 알람이 돼요.</Text>
+                  <Button label="내 목소리 녹음하기" variant="primary" onPress={() => router.push('/record')} />
                 </>
               )}
             </View>
           </View>
 
           <View style={styles.group}>
-            <Text style={styles.groupLabel}>Just for you</Text>
-            <Text style={styles.meta}>Alarms with no room — these ring for you alone.</Text>
+            <Text style={styles.groupLabel}>혼자 쓰는 알람</Text>
+            <Text style={styles.meta}>방 없는 알람 — 나한테만 울려요.</Text>
 
             {personals.map((alarm) => (
               <Pressable
                 key={alarm.id}
                 accessibilityRole="button"
-                accessibilityLabel={`${alarm.label || 'Alarm'} ${alarm.time}`}
+                accessibilityLabel={`${alarm.label || '알람'} ${alarm.time}`}
                 onPress={() => router.push({ pathname: '/alarm/[id]', params: { id: alarm.id } })}
                 style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
                 <View style={styles.rowText}>
                   <Text style={[styles.time, tabular, !alarm.enabled && styles.off]}>{alarm.time}</Text>
                   <Text style={styles.meta} numberOfLines={1}>
-                    {alarm.label || 'Alarm'} · {fmtDaysEN(alarm.days)}
+                    {alarm.label || '알람'} · {fmtDaysKR(alarm.days)}
                   </Text>
                 </View>
                 <Switch
@@ -143,23 +143,23 @@ export default function SettingsScreen() {
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="New alarm"
+              accessibilityLabel="새 알람"
               onPress={() => router.push({ pathname: '/alarm/[id]', params: { id: 'new' } })}
               style={({ pressed }) => [styles.addRow, pressed && styles.rowPressed]}>
-              <Text style={styles.addLabel}>＋ New alarm</Text>
+              <Text style={styles.addLabel}>＋ 새 알람</Text>
             </Pressable>
           </View>
 
           <View style={styles.group}>
-            <Text style={styles.groupLabel}>Your rooms</Text>
+            <Text style={styles.groupLabel}>내 방</Text>
             {rooms.length === 0 ? (
-              <Text style={styles.meta}>None yet — the ⊕ on the deck starts one.</Text>
+              <Text style={styles.meta}>아직 없어요 — 덱의 ⊕로 만들 수 있어요.</Text>
             ) : (
               rooms.map((room, i) => (
                 <Pressable
                   key={room.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`${room.name} settings`}
+                  accessibilityLabel={`${room.name} 설정`}
                   onPress={() => router.push({ pathname: '/room/[id]/settings', params: { id: room.id } })}
                   style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
                   <View style={[styles.swatch, { backgroundColor: cardColorAt(i).base }]} />
@@ -170,7 +170,7 @@ export default function SettingsScreen() {
                     <Text style={styles.meta} numberOfLines={1}>
                       {(() => {
                         const mine = myAlarmIn(room, state.me.id);
-                        return mine?.enabled ? `${mine.time} · ${fmtDaysEN(mine.days)}` : 'No alarm set';
+                        return mine?.enabled ? `${mine.time} · ${fmtDaysKR(mine.days)}` : '알람 없음';
                       })()}
                     </Text>
                   </View>
@@ -182,16 +182,23 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.group}>
-            <Text style={styles.groupLabel}>Sample data</Text>
-            <Text style={styles.meta}>
-              There is no server yet, so the rooms and mornings you see are fiction for judging the
-              design.
-            </Text>
+            <Text style={styles.groupLabel}>데이터</Text>
+            <Text style={styles.meta}>방, 알람, 녹음한 목소리를 이 기기에서 지워요.</Text>
             <View style={styles.actions}>
-              <Button label="Refill" variant="quiet" onPress={() => void mutate(() => store.loadMockData())} />
-              <Button label="Clear all" variant="quiet" onPress={confirmReset} />
+              <Button label="모든 데이터 지우기" variant="quiet" onPress={confirmReset} />
             </View>
           </View>
+
+          {/* Dev-only: seeds the design fixtures. Must never ship — a store build has no fiction. */}
+          {__DEV__ && (
+            <View style={styles.group}>
+              <Text style={styles.groupLabel}>Sample data (dev)</Text>
+              <Text style={styles.meta}>서버가 없는 동안 디자인 평가용 가짜 방을 채워요.</Text>
+              <View style={styles.actions}>
+                <Button label="Refill" variant="quiet" onPress={() => void mutate(() => store.loadMockData())} />
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
     </Screen>
@@ -203,7 +210,6 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   content: { paddingTop: spacing.sm, flexGrow: 1 },
   headline: { paddingHorizontal: spacing.lg, gap: spacing.xs, paddingBottom: spacing.lg },
-  sub: { ...type.label, fontSize: 16, color: colors.ink },
 
   // White against the cream, like the reference's sheet; runs off the bottom of the screen.
   sheet: {
@@ -217,7 +223,8 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
   },
   group: { gap: spacing.sm },
-  groupLabel: { ...type.heading, fontSize: 20, color: colors.ink },
+  // headingKr, not heading: these labels are Korean, and the heading face (Figtree) has no Hangul.
+  groupLabel: { ...type.headingKr, color: colors.ink },
   stack: { gap: spacing.sm, paddingTop: spacing.sm },
   rowLabel: { ...type.label, color: colors.inkSoft },
   input: {
@@ -244,7 +251,8 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   time: { ...type.time, fontSize: 26, letterSpacing: -0.5, color: colors.ink },
   off: { opacity: 0.35 },
-  roomName: { ...type.heading, fontSize: 17, color: colors.ink },
+  // Room names are user content and can be Korean, so they take the Hangul-carrying face.
+  roomName: { ...type.headingKr, fontSize: 17, color: colors.ink },
   swatch: { width: 26, height: 26, borderRadius: 8 },
   chevron: { ...type.heading, fontSize: 22, color: colors.lineStrong },
 

@@ -40,17 +40,17 @@ export default function PersonalAlarmScreen() {
       }
       router.back();
     } catch {
-      Alert.alert("Couldn't save", 'Try again in a moment.');
+      Alert.alert('저장을 못 했어요', '잠시 뒤 다시 해봐요.');
     } finally {
       setSaving(false);
     }
   }
 
   function confirmDelete() {
-    Alert.alert('Delete this alarm?', "It won't ring again.", [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('이 알람을 지울까요?', '다시 울리지 않아요.', [
+      { text: '취소', style: 'cancel' },
       {
-        text: 'Delete',
+        text: '지우기',
         style: 'destructive',
         onPress: async () => {
           await mutate(async () => {
@@ -66,12 +66,12 @@ export default function PersonalAlarmScreen() {
   return (
     <Screen>
       <View style={styles.topRow}>
-        <RoundButton glyph="✕" label="Close" size={38} onPress={() => router.back()} />
+        <RoundButton glyph="✕" label="닫기" size={38} onPress={() => router.back()} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.headline}>
-          <Display>{isNew ? 'Just for\nyou' : 'Edit\nalarm'}</Display>
+          <Display kr>{isNew ? '혼자 쓰는\n알람' : '알람\n수정'}</Display>
         </View>
 
         {/* The editor sits on its own pastel card, so making an alarm feels like making a thing —
@@ -82,7 +82,7 @@ export default function PersonalAlarmScreen() {
           <TextInput
             value={label}
             onChangeText={setLabel}
-            placeholder="Name it — Nap? Gym?"
+            placeholder="이름 붙이기 — 낮잠? 헬스?"
             placeholderTextColor={colors.lineStrong}
             style={styles.input}
             returnKeyType="done"
@@ -91,11 +91,11 @@ export default function PersonalAlarmScreen() {
           </View>
         </View>
 
-        {!isNew && <Button label="Delete alarm" variant="danger" onPress={confirmDelete} />}
+        {!isNew && <Button label="알람 지우기" variant="danger" onPress={confirmDelete} />}
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button label={isNew ? 'Add alarm' : 'Save'} variant="primary" onPress={() => void save()} loading={saving} />
+        <Button label={isNew ? '알람 추가' : '저장'} variant="primary" onPress={() => void save()} loading={saving} />
       </View>
     </Screen>
   );
@@ -117,8 +117,9 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 5 },
   },
+  // headingKr, not heading: labels typed here are usually Korean, and Figtree has no Hangul.
   input: {
-    ...type.heading,
+    ...type.headingKr,
     fontSize: 22,
     color: colors.ink,
     backgroundColor: colors.paperLight,

@@ -69,10 +69,10 @@ export default function DayScreen() {
     return (
       <Screen style={{ backgroundColor: color.base }}>
         <View style={styles.topRow}>
-          <RoundButton glyph="←" label="Back" size={38} onPress={() => router.back()} />
+          <RoundButton glyph="←" label="뒤로" size={38} onPress={() => router.back()} />
         </View>
         <View style={styles.gone}>
-          <Text style={styles.headline}>This room{'\n'}is gone</Text>
+          <Text style={styles.goneText}>방이{'\n'}사라졌어요</Text>
         </View>
       </Screen>
     );
@@ -100,10 +100,10 @@ export default function DayScreen() {
   const noMorning = !rings || isFuture;
   const wokeCount = ordered.filter((m) => recordByMember.has(m.id)).length;
   const peopleHeading = !rings
-    ? `IN THIS ROOM · ${room.members.length}`
+    ? `이 방 사람들 · ${room.members.length}`
     : isFuture
-      ? `WAKING UP · ${room.members.length}`
-      : `WHO GOT UP · ${wokeCount}/${room.members.length}`;
+      ? `일어날 사람 · ${room.members.length}`
+      : `일어난 사람 · ${wokeCount}/${room.members.length}`;
 
   /**
    * Room alarm edits have to reach AlarmKit too, or the screen and the device disagree. A refusal
@@ -123,7 +123,7 @@ export default function DayScreen() {
   async function stopRecording() {
     const take = await rec.stop();
     if (!take) {
-      Alert.alert('A little longer', `It needs at least ${MIN_SECONDS} seconds.`);
+      Alert.alert('조금만 더', `최소 ${MIN_SECONDS}초는 돼야 해요.`);
       return;
     }
     const soundName = await saveVoiceAsAlarmSound(take.uri);
@@ -134,7 +134,7 @@ export default function DayScreen() {
     <Screen style={{ backgroundColor: color.base }}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.topRow}>
-          <RoundButton glyph="←" label="Back to the week" size={38} onPress={() => router.back()} />
+          <RoundButton glyph="←" label="주간 덱으로" size={38} onPress={() => router.back()} />
           {isToday && (
             <View style={styles.todayPill}>
               <Text style={styles.todayText}>TODAY</Text>
@@ -152,7 +152,7 @@ export default function DayScreen() {
 
         <GlassCard contentStyle={styles.alarmCard}>
           <View style={styles.alarmTop}>
-            <Text style={styles.eyebrow}>YOUR WAKE-UP</Text>
+            <Text style={styles.eyebrow}>내 알람</Text>
             <Switch
               value={rings}
               onValueChange={() => void toggleThisDay()}
@@ -164,7 +164,7 @@ export default function DayScreen() {
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Your alarm ${myTime}, change`}
+            accessibilityLabel={`내 알람 ${myTime}, 변경`}
             onPress={() => setPickingTime((v) => !v)}
             style={({ pressed }) => pressed && styles.pressed}>
             <Text style={[styles.time, tabular, !rings && styles.dim]}>{myTime}</Text>
@@ -180,13 +180,13 @@ export default function DayScreen() {
                 style={styles.picker}
                 onChange={(_, picked) => picked && void saveAlarm({ time: dateToTime(picked) })}
               />
-              <Button label="Done" variant="onCard" onPress={() => setPickingTime(false)} />
+              <Button label="완료" variant="onCard" onPress={() => setPickingTime(false)} />
             </View>
           ) : (
             <Text style={styles.alarmNote}>
               {rings
-                ? `Yours only — everyone in ${room.name} sets their own. Tap to change it.`
-                : `You have no alarm on ${DAY_NAMES[dayIdx]}s. The switch turns this morning on.`}
+                ? `내 알람이에요 — ${room.name} 사람들은 각자 정해요. 시각을 누르면 바꿀 수 있어요.`
+                : '이 요일엔 알람이 없어요. 스위치로 이 아침을 켜요.'}
             </Text>
           )}
         </GlassCard>
@@ -204,7 +204,7 @@ export default function DayScreen() {
                     {member.id === state.me.id ? 'You' : member.name}
                   </Text>
                   <Text style={[styles.personMeta, tabular, !record && styles.dim]}>
-                    {record ? hhmm(record.wokeAt) : noMorning ? '—' : isToday ? 'Asleep' : 'Missed'}
+                    {record ? hhmm(record.wokeAt) : noMorning ? '—' : isToday ? '아직' : '놓침'}
                   </Text>
                 </View>
               );
@@ -213,7 +213,7 @@ export default function DayScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.eyebrow}>YOUR VOICE</Text>
+          <Text style={styles.eyebrow}>내 목소리</Text>
           <View style={styles.recordCard}>
             <Waveform
               festive
@@ -226,32 +226,32 @@ export default function DayScreen() {
 
             <Text style={styles.recordNote}>
               {rec.permissionDenied
-                ? 'Microphone access is off — turn it on in Settings › Privacy › Microphone.'
+                ? '마이크 접근이 꺼져 있어요 — 설정 › 개인정보 보호 › 마이크에서 켜요.'
                 : rec.isRecording
-                  ? `${rec.elapsed.toFixed(1)}s — keep talking`
+                  ? `${rec.elapsed.toFixed(1)}s — 계속 말해요`
                   : rec.recordedUri
-                    ? 'Saved. One of them wakes up to this.'
+                    ? '저장됐어요. 이 중 누군가 이 소리에 깨요.'
                     : myVoice
-                      ? `Anyone in ${room.name} might wake up to this.`
-                      : `${MIN_SECONDS}–${MAX_SECONDS} seconds. Say something worth waking up to.`}
+                      ? `${room.name}의 누군가 이 목소리에 깰 수 있어요.`
+                      : `${MIN_SECONDS}–${MAX_SECONDS}초. 아침에 들려주고 싶은 말로.`}
             </Text>
 
             {!rec.permissionDenied &&
               (rec.isRecording ? (
                 <Button
-                  label={rec.reachedMinimum ? 'Stop here' : `Keep going to ${MIN_SECONDS}s`}
+                  label={rec.reachedMinimum ? '여기까지' : `${MIN_SECONDS}초까지 이어서`}
                   variant={rec.reachedMinimum ? 'primary' : 'secondary'}
                   onPress={() => void stopRecording()}
                 />
               ) : (
                 <View style={styles.recordActions}>
                   <Button
-                    label={myVoice || rec.recordedUri ? 'Record again' : 'Record'}
+                    label={myVoice || rec.recordedUri ? '다시 녹음' : '녹음'}
                     variant="primary"
                     onPress={() => void rec.start()}
                   />
                   {(myVoice || rec.recordedUri) && (
-                    <Button label="Listen" variant="quiet" onPress={() => player.play()} />
+                    <Button label="들어보기" variant="quiet" onPress={() => player.play()} />
                   )}
                 </View>
               ))}
@@ -279,10 +279,12 @@ const styles = StyleSheet.create({
   headline: { ...type.display, color: colors.ink },
   room: { ...type.label, fontSize: 16, color: colors.ink, opacity: 0.7 },
   gone: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.lg },
+  goneText: { ...type.displayKr, color: colors.ink },
 
   alarmCard: { padding: spacing.xl, gap: spacing.sm },
   alarmTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  eyebrow: { ...type.eyebrow, color: colors.inkSoft },
+  // eyebrowKr, not eyebrow: these are Korean now, and the eyebrow face has no Hangul.
+  eyebrow: { ...type.eyebrowKr, color: colors.inkSoft },
   time: { ...type.timeLg, fontSize: 72, letterSpacing: -3, color: colors.ink },
   alarmNote: { ...type.caption, color: colors.inkSoft },
   pickerWrap: { gap: spacing.sm },
