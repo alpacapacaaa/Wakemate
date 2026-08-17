@@ -10,6 +10,8 @@ declare class AlarmKitModule extends NativeModule<AlarmKitModuleEvents> {
   scheduleDailyAlarm(params: ScheduleAlarmParams): Promise<string>;
   /** Re-schedules an existing alarm with a new sound file. params.alarmId is required. */
   updateAlarmSound(params: ScheduleAlarmParams): Promise<string>;
+  /** Ids of every alarm this app currently has with the system. */
+  listAlarmIds(): string[];
   cancelAlarm(alarmId: string): Promise<void>;
 
   /** Copies a locally-downloaded file into the App Group Library/Sounds container under `filename`. Returns the destination path. */
