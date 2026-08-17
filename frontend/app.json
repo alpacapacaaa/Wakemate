@@ -28,7 +28,14 @@
       "expo-router",
       "expo-audio",
       "expo-status-bar",
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#f7f2e6"
+        }
+      ],
       "expo-font"
     ],
     "experiments": {
