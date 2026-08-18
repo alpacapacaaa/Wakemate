@@ -114,6 +114,15 @@ export const fonts = {
 export const type = {
   display: { fontFamily: fonts.latin, fontSize: 40, letterSpacing: -1.4, lineHeight: 46 },
   displaySm: { fontFamily: fonts.display, fontSize: 27, letterSpacing: -0.9, lineHeight: 34 },
+  /**
+   * Korean-carrying counterparts. Figtree has no Hangul, so Korean set in `display`/`heading`/
+   * `eyebrow` silently falls back to the system font at regular weight — these keep Korean text in
+   * Gothic A1 at the same visual weight. English display lines (the deck, day names, clock digits)
+   * stay in Figtree.
+   */
+  displayKr: { fontFamily: fonts.display, fontSize: 34, letterSpacing: -1.2, lineHeight: 44 },
+  headingKr: { fontFamily: fonts.displayMd, fontSize: 20, letterSpacing: -0.5 },
+  eyebrowKr: { fontFamily: fonts.strong, fontSize: 13, letterSpacing: 0.2 },
   heading: { fontFamily: fonts.latin, fontSize: 22, letterSpacing: -0.4 },
   /** Clock numerals. Pair with fontVariant: ['tabular-nums'] wherever digits stack in a column. */
   time: { fontFamily: fonts.numeric, fontSize: 34, letterSpacing: -1 },

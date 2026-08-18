@@ -18,7 +18,7 @@ export default function RecordScreen() {
 
   async function stopRecording() {
     const take = await rec.stop();
-    if (!take) Alert.alert('A little longer', `It needs at least ${MIN_SECONDS} seconds.`);
+    if (!take) Alert.alert('조금만 더', `최소 ${MIN_SECONDS}초는 돼야 해요.`);
   }
 
   async function save() {
@@ -31,23 +31,19 @@ export default function RecordScreen() {
   return (
     <Screen>
       <View style={styles.topRow}>
-        <RoundButton glyph="✕" label="Close" size={38} onPress={() => router.back()} />
+        <RoundButton glyph="✕" label="닫기" size={38} onPress={() => router.back()} />
       </View>
 
       <View style={styles.body}>
         <View style={styles.headline}>
-          <Display>Say good{'\n'}morning</Display>
+          <Display kr>목소리로{'\n'}굿모닝</Display>
           <Body muted>
-            {MIN_SECONDS}–{MAX_SECONDS} seconds. It plays as the alarm for a random friend in your
-            rooms.
+            {MIN_SECONDS}–{MAX_SECONDS}초. 방 친구 중 한 명이 알람 대신 이 소리에 깨요.
           </Body>
         </View>
 
         {rec.permissionDenied ? (
-          <Banner
-            tone="warn"
-            text="Microphone access is off. Enable it in Settings › Privacy › Microphone, then come back."
-          />
+          <Banner tone="warn" text="마이크 접근이 꺼져 있어요. 설정 › 개인정보 보호 › 마이크에서 켠 뒤 다시 와요." />
         ) : (
           /* The voice as a sticker: a slightly crooked pastel card, the take drawn in deck colours
              across it. This is the one emotional screen, so it gets the one crooked thing. */
@@ -68,8 +64,8 @@ export default function RecordScreen() {
                   {rec.isRecording
                     ? `${rec.elapsed.toFixed(1)}s`
                     : rec.recordedUri
-                      ? `${(rec.recordedMs / 1000).toFixed(1)}s · saved to your sticker`
-                      : `press record, say hi`}
+                      ? `${(rec.recordedMs / 1000).toFixed(1)}초 · 잘 나왔어요`
+                      : '녹음을 누르고, 한마디'}
                 </Text>
               </View>
             </View>
@@ -87,20 +83,20 @@ export default function RecordScreen() {
         <View style={styles.footer}>
           {rec.isRecording ? (
             <Button
-              label={rec.reachedMinimum ? 'Stop here' : `Keep going to ${MIN_SECONDS}s`}
+              label={rec.reachedMinimum ? '여기까지' : `${MIN_SECONDS}초까지 이어서`}
               variant={rec.reachedMinimum ? 'primary' : 'secondary'}
               onPress={() => void stopRecording()}
             />
           ) : rec.recordedUri ? (
             <>
-              <Button label="Save this voice" variant="primary" onPress={() => void save()} />
+              <Button label="이 목소리로 저장" variant="primary" onPress={() => void save()} />
               <View style={styles.quietRow}>
-                <Button label="Listen" variant="quiet" onPress={() => player.play()} />
-                <Button label="Try again" variant="quiet" onPress={() => void rec.start()} />
+                <Button label="들어보기" variant="quiet" onPress={() => player.play()} />
+                <Button label="다시 녹음" variant="quiet" onPress={() => void rec.start()} />
               </View>
             </>
           ) : (
-            <Button label="Start recording" variant="primary" onPress={() => void rec.start()} />
+            <Button label="녹음 시작" variant="primary" onPress={() => void rec.start()} />
           )}
         </View>
       )}

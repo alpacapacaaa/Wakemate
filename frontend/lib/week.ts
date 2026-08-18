@@ -38,6 +38,16 @@ export function fmtDaysEN(days: number): string {
   return L.filter((_, i) => days & (1 << i)).join(' · ');
 }
 
+/** The same schedule, said in Korean — functional copy is Korean, day names on the deck stay English. */
+export function fmtDaysKR(days: number): string {
+  if (days === 0) return '한 번만';
+  if (days === 127) return '매일';
+  if (days === 31) return '평일';
+  if (days === 96) return '주말';
+  const L = ['월', '화', '수', '목', '금', '토', '일'];
+  return L.filter((_, i) => days & (1 << i)).join('·');
+}
+
 export type UpcomingRing = {
   /** Minutes from now until it rings. */
   minutes: number;

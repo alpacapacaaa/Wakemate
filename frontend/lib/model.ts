@@ -48,6 +48,16 @@ export type Room = {
   name: string;
   /** Short human-shareable invite code. */
   code: string;
+  /**
+   * When the code stops working — 7 days after issue. The owner can reissue; the settings screen
+   * shows the time left so nobody shares a dead code.
+   */
+  codeExpiresAt: string;
+  /**
+   * Whoever created the room. The only member who can remove someone, reissue the code, or hand
+   * the room over — and ownership never moves by itself (`docs/MVP.md`).
+   */
+  ownerId: string;
   members: Member[];
   createdAt: string;
   /** AlarmKit's id for *my* alarm in this room, on *this* device. */
@@ -111,11 +121,24 @@ export type Me = {
   voiceSoundName: string | null;
 };
 
+/** A report I filed about someone's recording. Kept until a server exists to receive it. */
+export type Report = {
+  memberId: string;
+  roomId: string;
+  at: string;
+};
+
 export type AppState = {
   me: Me;
   rooms: Room[];
   personalAlarms: PersonalAlarm[];
   wakeRecords: WakeRecord[];
+  /**
+   * People whose voice must never wake me (and, once the server owns assignment, who never hear
+   * mine). App Store guideline 1.2 requires blocking wherever user recordings reach other users.
+   */
+  blockedIds: string[];
+  reports: Report[];
   /**
    * When the first run finished, or null if it has not. Tracked explicitly rather than guessed
    * from "has a name" or "has a room", because someone who deliberately skipped both should not be

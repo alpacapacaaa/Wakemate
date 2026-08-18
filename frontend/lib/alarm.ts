@@ -17,7 +17,10 @@ export async function saveVoiceAsAlarmSound(voiceUri: string): Promise<string | 
   try {
     // The recorder hands back a file:// URL; the native side copies by path.
     const path = voiceUri.startsWith('file://') ? decodeURI(voiceUri.slice('file://'.length)) : voiceUri;
-    const name = `voice_${Date.now().toString(36)}.caf`;
+    // One deterministic name, overwritten in place (the native side removes before copying) — a
+    // re-record replaces the file instead of adding a timestamped sibling forever. Downloaded
+    // roommate voices will get `voice_<memberId>.caf` the same way.
+    const name = 'voice_me.caf';
     await AlarmKitModule.saveSoundToAppGroup(path, name);
     return name;
   } catch {
@@ -124,8 +127,10 @@ export async function syncRoomAlarm(room: Room, myId: string): Promise<AlarmSync
     return { ok: true, nativeAlarmId: null };
   }
   // Only a voice whose file is on this device can ring; everyone else falls back to the system
-  // sound rather than to a filename that would make the whole alarm fail.
-  const picked = pickVoiceFor(room, myId);
+  // sound rather than to a filename that would make the whole alarm fail. Blocked members are
+  // never picked — that is what blocking means here.
+  const { blockedIds } = await store.getState();
+  const picked = pickVoiceFor(room, myId, blockedIds);
   return schedule(room.nativeAlarmId, mine, room.name, picked?.voiceSoundName ?? null);
 }
 
@@ -230,23 +235,19 @@ export function reportAlarmFailure(result: AlarmSyncResult): void {
 
   if (result.reason === 'unavailable') {
     Alert.alert(
-      "This device can't ring alarms",
-      'Alarms need iOS 26 on a real device. Everything else works here, but nothing will actually ring.'
+      '이 기기에서는 알람이 울리지 않아요',
+      '알람은 iOS 26 실기기에서만 울려요. 다른 기능은 그대로 쓸 수 있지만, 실제로 울리지는 않아요.'
     );
     return;
   }
 
   if (result.reason === 'denied') {
-    Alert.alert(
-      'Alarms are turned off',
-      'iOS needs permission before this app can ring an alarm. Turn it on, then set the alarm again.',
-      [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Open Settings', onPress: () => void Linking.openSettings() },
-      ]
-    );
+    Alert.alert('알람 권한이 꺼져 있어요', 'iOS 설정에서 알람을 허용한 뒤, 알람을 다시 설정해요.', [
+      { text: '나중에', style: 'cancel' },
+      { text: '설정 열기', onPress: () => void Linking.openSettings() },
+    ]);
     return;
   }
 
-  Alert.alert('That alarm was not set', `The device turned it down, so nothing will ring.\n\n${result.detail}`);
+  Alert.alert('알람이 설정되지 않았어요', `기기가 알람을 거부해서 울리지 않아요.\n\n${result.detail}`);
 }

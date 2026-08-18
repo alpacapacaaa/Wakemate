@@ -24,7 +24,7 @@ export default function NewRoomScreen() {
   async function create() {
     const trimmed = name.trim();
     if (!trimmed) {
-      Alert.alert('Give it a name', 'Your friends will see it on their deck.');
+      Alert.alert('이름이 필요해요', '친구들 덱에 이 이름으로 떠요.');
       return;
     }
     if (!state) return;
@@ -42,7 +42,7 @@ export default function NewRoomScreen() {
       reportAlarmFailure(result);
       router.back();
     } catch {
-      Alert.alert("Couldn't create the room", 'Try again in a moment.');
+      Alert.alert('방을 못 만들었어요', '잠시 뒤 다시 해봐요.');
     } finally {
       setSaving(false);
     }
@@ -51,22 +51,22 @@ export default function NewRoomScreen() {
   return (
     <Screen>
       <View style={styles.topRow}>
-        <RoundButton glyph="✕" label="Close" size={38} onPress={() => router.back()} />
+        <RoundButton glyph="✕" label="닫기" size={38} onPress={() => router.back()} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.headline}>
-          <Display>A new{'\n'}morning crew</Display>
+          <Display kr>같이 깰{'\n'}새 방</Display>
           <Body muted>
-            Everyone here wakes each other with their own voice. You each set your own time — yours
-            starts at 07:00 on weekdays, and the day cards are where you change it.
+            서로의 목소리로 깨우는 사이가 돼요. 시간은 각자 정해요 — 내 건 평일 07:00으로 시작하고,
+            요일 카드에서 바꿔요.
           </Body>
         </View>
 
         <TextInput
           value={name}
           onChangeText={setName}
-          placeholder="Room name"
+          placeholder="방 이름"
           placeholderTextColor={colors.lineStrong}
           style={styles.input}
           returnKeyType="done"
@@ -75,7 +75,7 @@ export default function NewRoomScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button label="Create room" variant="primary" onPress={() => void create()} loading={saving} />
+        <Button label="만들기" variant="primary" onPress={() => void create()} loading={saving} />
       </View>
     </Screen>
   );
@@ -85,8 +85,9 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, gap: spacing.xl },
   headline: { gap: spacing.sm },
+  // headingKr, not heading: room names are usually Korean, and Figtree has no Hangul.
   input: {
-    ...type.heading,
+    ...type.headingKr,
     fontSize: 24,
     color: colors.ink,
     backgroundColor: colors.paperLight,

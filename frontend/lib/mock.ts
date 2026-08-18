@@ -20,6 +20,11 @@ function localDate(daysAgo: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** Code expiry `days` from now — negative makes an already-expired code, so that state is judgeable. */
+function expiry(days: number): string {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 function id(prefix: string, n: number): string {
   return `${prefix}-${n}`;
 }
@@ -115,10 +120,14 @@ export function mockState(meId: string): AppState {
     member('gym', 4, true, '06:30', 96),
   ];
 
+  // Ownership is spread so every state the settings screen has is on show: a room I own (kick,
+  // reissue), one I don't (the same screen without the owner tools), and one with a dead code.
   const study: Room = {
     id: 'room-study',
     name: 'Study crew',
     code: 'K7QM3P',
+    codeExpiresAt: expiry(5),
+    ownerId: meId,
     createdAt: new Date().toISOString(),
     nativeAlarmId: null,
     members: studyMembers,
@@ -128,6 +137,8 @@ export function mockState(meId: string): AppState {
     id: 'room-gym',
     name: 'Gym buddies',
     code: 'B4XR9T',
+    codeExpiresAt: expiry(2),
+    ownerId: 'gym-1',
     createdAt: new Date().toISOString(),
     nativeAlarmId: null,
     members: gymMembers,
@@ -175,15 +186,18 @@ export function mockState(meId: string): AppState {
   // Enough rooms that every weekday has at least one and busy days have several — the week deck
   // is judged by how a full week reads.
   const extra: Room[] = [
-    { id: 'room-flat', name: 'Flatmates', code: 'M2WD8K', time: '08:00', days: 127, seed: 'flat', size: 4 },
-    { id: 'room-cafe', name: 'Café openers', code: 'R9NX4V', time: '05:40', days: 31, seed: 'cafe', size: 3 },
-    { id: 'room-run', name: 'Run club', code: 'T6HY2Q', time: '06:00', days: 96, seed: 'run', size: 6 },
-    { id: 'room-lab', name: 'Lab people', code: 'C3JP7L', time: '09:00', days: 31, seed: 'lab', size: 5 },
-    { id: 'room-band', name: 'Band practice', code: 'W8FZ5N', time: '10:30', days: 96, seed: 'band', size: 4 },
-  ].map(({ id: rid, name, code, time, days, seed, size }) => ({
+    // Flatmates' code is already dead and I own it — the "make a new code" state.
+    { id: 'room-flat', name: 'Flatmates', code: 'M2WD8K', time: '08:00', days: 127, seed: 'flat', size: 4, exp: -1, mine: true },
+    { id: 'room-cafe', name: 'Café openers', code: 'R9NX4V', time: '05:40', days: 31, seed: 'cafe', size: 3, exp: 6, mine: false },
+    { id: 'room-run', name: 'Run club', code: 'T6HY2Q', time: '06:00', days: 96, seed: 'run', size: 5, exp: 3, mine: true },
+    { id: 'room-lab', name: 'Lab people', code: 'C3JP7L', time: '09:00', days: 31, seed: 'lab', size: 5, exp: 1, mine: false },
+    { id: 'room-band', name: 'Band practice', code: 'W8FZ5N', time: '10:30', days: 96, seed: 'band', size: 4, exp: 4, mine: false },
+  ].map(({ id: rid, name, code, time, days, seed, size, exp, mine }) => ({
     id: rid,
     name,
     code,
+    codeExpiresAt: expiry(exp),
+    ownerId: mine ? meId : id(seed, 0),
     createdAt: new Date().toISOString(),
     nativeAlarmId: null,
     members: [
@@ -211,6 +225,8 @@ export function mockState(meId: string): AppState {
     me,
     // Loading fixtures is not a first run — whoever asked for them has already seen the app.
     onboardedAt: new Date().toISOString(),
+    blockedIds: [],
+    reports: [],
     rooms: [study, gym, ...extra],
     personalAlarms: [
       {

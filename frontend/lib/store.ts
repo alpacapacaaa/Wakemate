@@ -23,7 +23,23 @@ import {
 
 // Bumped whenever the mock content changes shape: the seed only runs on an empty store, so a
 // stale saved copy would otherwise keep showing the previous prototype's data.
-const KEY = 'app_state_v13';
+const KEY = 'app_state_v14';
+
+/** Codes die after this — a leaked one only works for a week. */
+const CODE_DAYS = 7;
+
+function codeExpiry(): string {
+  return new Date(Date.now() + CODE_DAYS * 24 * 60 * 60 * 1000).toISOString();
+}
+
+/** The one error shape screens branch on — mirrors the server's `{ code }` (docs/api-contract.md §3). */
+export class StoreError extends Error {
+  code: 'CODE_EXPIRED' | 'NOT_FOUND' | 'ROOM_FULL';
+  constructor(code: StoreError['code']) {
+    super(code);
+    this.code = code;
+  }
+}
 
 function id(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -41,6 +57,8 @@ function emptyState(): AppState {
     rooms: [],
     personalAlarms: [],
     wakeRecords: [],
+    blockedIds: [],
+    reports: [],
     onboardedAt: null,
   };
 }
@@ -136,6 +154,8 @@ const operations = {
       id: id(),
       name,
       code: inviteCode(),
+      codeExpiresAt: codeExpiry(),
+      ownerId: s.me.id,
       createdAt: new Date().toISOString(),
       nativeAlarmId: null,
       members: [
@@ -162,13 +182,20 @@ const operations = {
     const s = await read();
     const upper = code.toUpperCase();
     const existing = s.rooms.find((r) => r.code === upper);
-    if (existing) return existing;
+    if (existing) {
+      // The one join failure that can be exercised without a server. The screen's error mapping is
+      // written against StoreError.code, which is the server's `code` verbatim.
+      if (new Date(existing.codeExpiresAt).getTime() < Date.now()) throw new StoreError('CODE_EXPIRED');
+      return existing;
+    }
     // Built inline rather than through createRoom: operations are queued, so one calling another
     // would wait for a turn that cannot come until it returns.
     const room: Room = {
       id: id(),
       name: roomName,
       code: upper,
+      codeExpiresAt: codeExpiry(),
+      ownerId: s.me.id,
       createdAt: new Date().toISOString(),
       nativeAlarmId: null,
       members: [
@@ -263,6 +290,70 @@ const operations = {
     });
   },
 
+  /**
+   * Removes someone, and erases them the way the contract says leaving does: their mornings in
+   * this room are deleted, and records of people *they* woke stop naming them. A record pointing
+   * at an id that is no longer in the room is one no screen can draw.
+   */
+  async removeMember(roomId: string, memberId: string): Promise<Room | null> {
+    const s = await read();
+    let updated: Room | null = null;
+    const rooms = s.rooms.map((r) => {
+      if (r.id !== roomId) return r;
+      updated = { ...r, members: r.members.filter((m) => m.id !== memberId) };
+      return updated;
+    });
+    const wakeRecords = s.wakeRecords
+      .filter((w) => !(w.roomId === roomId && w.memberId === memberId))
+      .map((w) => (w.roomId === roomId && w.wokenByMemberId === memberId ? { ...w, wokenByMemberId: null } : w));
+    await write({ ...s, rooms, wakeRecords });
+    return updated;
+  },
+
+  /** Hands the room over. Separate from leaving on purpose — an owner can also hand over and stay. */
+  async transferOwner(roomId: string, memberId: string): Promise<Room | null> {
+    const s = await read();
+    let updated: Room | null = null;
+    const rooms = s.rooms.map((r) => {
+      if (r.id !== roomId || !r.members.some((m) => m.id === memberId)) return r;
+      updated = { ...r, ownerId: memberId };
+      return updated;
+    });
+    await write({ ...s, rooms });
+    return updated;
+  },
+
+  /** New code, fresh week. The old one stops working immediately — this is the answer to a leak. */
+  async reissueCode(roomId: string): Promise<Room | null> {
+    const s = await read();
+    let updated: Room | null = null;
+    const rooms = s.rooms.map((r) => {
+      if (r.id !== roomId) return r;
+      updated = { ...r, code: inviteCode(), codeExpiresAt: codeExpiry() };
+      return updated;
+    });
+    await write({ ...s, rooms });
+    return updated;
+  },
+
+  // MARK: safety — blocking and reporting (App Store guideline 1.2)
+
+  /** Their voice never rings for me again. `pickVoiceFor` reads this list. */
+  async setBlocked(memberId: string, blocked: boolean): Promise<AppState> {
+    const s = await read();
+    const without = s.blockedIds.filter((b) => b !== memberId);
+    return write({ ...s, blockedIds: blocked ? [...without, memberId] : without });
+  },
+
+  /** Kept locally until `POST /reports` exists to receive it. */
+  async reportMember(memberId: string, roomId: string): Promise<AppState> {
+    const s = await read();
+    return write({
+      ...s,
+      reports: [...s.reports, { memberId, roomId, at: new Date().toISOString() }],
+    });
+  },
+
   // MARK: personal alarms
 
   async addPersonalAlarm(input: Omit<PersonalAlarm, 'id' | 'nativeAlarmId'>): Promise<PersonalAlarm> {
@@ -314,13 +405,13 @@ export const store = serialize(operations);
 /**
  * Which roommate's voice rings for `myId` in this room.
  *
- * Uniform among members other than me who have actually recorded. Returns null when nobody
- * qualifies and the caller must fall back to the bundled sound — an alarm that does not ring is
- * the one unacceptable outcome.
+ * Uniform among members other than me who have actually recorded and whom I have not blocked.
+ * Returns null when nobody qualifies and the caller must fall back to the bundled sound — an alarm
+ * that does not ring is the one unacceptable outcome.
  */
-export function pickVoiceFor(room: Room | null, myId: string): Member | null {
+export function pickVoiceFor(room: Room | null, myId: string, blockedIds: string[] = []): Member | null {
   if (!room) return null;
-  const candidates = room.members.filter((m) => m.id !== myId && m.voiceUri);
+  const candidates = room.members.filter((m) => m.id !== myId && m.voiceUri && !blockedIds.includes(m.id));
   if (candidates.length === 0) return null;
   return candidates[Math.floor(Math.random() * candidates.length)];
 }

@@ -69,13 +69,13 @@ export default function WelcomeScreen() {
         {step === 'name' && (
           <>
             <View style={styles.headline}>
-              <Display>First,{'\n'}your name</Display>
-              <Body muted>It is what your friends see when your voice wakes them.</Body>
+              <Display kr>먼저,{'\n'}이름부터</Display>
+              <Body muted>친구가 내 목소리에 깰 때 보이는 이름이에요.</Body>
             </View>
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder="Your name"
+              placeholder="이름"
               placeholderTextColor={colors.lineStrong}
               style={styles.input}
               autoFocus
@@ -89,10 +89,9 @@ export default function WelcomeScreen() {
         {step === 'voice' && (
           <>
             <View style={styles.headline}>
-              <Display>Now,{'\n'}your voice</Display>
+              <Display kr>다음은,{'\n'}목소리</Display>
               <Body muted>
-                Five to ten seconds. A friend wakes up to this instead of to a beep — and you wake up
-                to theirs.
+                5–10초면 돼요. 친구는 알람음 대신 이 목소리에 깨요 — 나는 친구 목소리에 깨고요.
               </Body>
             </View>
             <View style={styles.card}>
@@ -105,10 +104,8 @@ export default function WelcomeScreen() {
         {step === 'room' && (
           <>
             <View style={styles.headline}>
-              <Display>Last,{'\n'}your crew</Display>
-              <Body muted>
-                A room is who you wake up with, not when — everyone in it keeps their own time.
-              </Body>
+              <Display kr>마지막,{'\n'}같이 깰 사람들</Display>
+              <Body muted>방은 누구와 함께 일어나느냐예요. 시간은 각자 자기 걸 정해요.</Body>
             </View>
           </>
         )}
@@ -116,17 +113,17 @@ export default function WelcomeScreen() {
         {step === 'done' && (
           <>
             <View style={styles.headline}>
-              <Display>That is{'\n'}everything</Display>
+              <Display kr>준비{'\n'}끝</Display>
               <Body muted>
                 {recorded
-                  ? `${rooms[0].name} is on your deck. Swipe a day sideways to skip that morning.`
-                  : `${rooms[0].name} is on your deck. Record your voice whenever you like — until then it rings with the default sound.`}
+                  ? `${rooms[0].name} 방이 덱에 올라왔어요. 요일 카드를 옆으로 밀면 그 아침을 끌 수 있어요.`
+                  : `${rooms[0].name} 방이 덱에 올라왔어요. 목소리는 언제든 녹음하면 돼요 — 그 전까지는 기본음으로 울려요.`}
               </Body>
             </View>
             {recorded && (
               <View style={styles.card}>
                 <Waveform festive seed={state.me.id} height={72} bars={40} />
-                <Text style={styles.cardNote}>Your voice, ready to wake somebody.</Text>
+                <Text style={styles.cardNote}>누군가를 깨울 내 목소리.</Text>
               </View>
             )}
           </>
@@ -135,28 +132,28 @@ export default function WelcomeScreen() {
 
       <View style={styles.footer}>
         {step === 'name' && (
-          <Button label="Continue" variant="primary" disabled={!name.trim()} onPress={() => void saveName()} />
+          <Button label="다음" variant="primary" disabled={!name.trim()} onPress={() => void saveName()} />
         )}
 
         {step === 'voice' && (
           <>
-            <Button label="Record my voice" variant="primary" onPress={() => router.push('/record')} />
-            <Button label="Not now" variant="quiet" onPress={() => void finish()} />
+            <Button label="내 목소리 녹음" variant="primary" onPress={() => router.push('/record')} />
+            <Button label="나중에" variant="quiet" onPress={() => void finish()} />
           </>
         )}
 
         {step === 'room' && (
           <>
-            <Button label="Create a room" variant="primary" onPress={() => router.push('/room/new')} />
-            <Button label="Join with a code" variant="secondary" onPress={() => router.push('/room/join')} />
-            <Button label="Not now" variant="quiet" onPress={() => void finish()} />
+            <Button label="방 만들기" variant="primary" onPress={() => router.push('/room/new')} />
+            <Button label="코드로 참여" variant="secondary" onPress={() => router.push('/room/join')} />
+            <Button label="나중에" variant="quiet" onPress={() => void finish()} />
           </>
         )}
 
         {step === 'done' && (
           <>
-            {recorded && <Button label="Listen" variant="quiet" onPress={() => player.play()} />}
-            <Button label="Open Wakemate" variant="primary" onPress={() => void finish()} />
+            {recorded && <Button label="들어보기" variant="quiet" onPress={() => player.play()} />}
+            <Button label="시작하기" variant="primary" onPress={() => void finish()} />
           </>
         )}
       </View>
@@ -171,8 +168,9 @@ const styles = StyleSheet.create({
   tick: { flex: 1, height: 5, borderRadius: 3 },
 
   headline: { gap: spacing.sm },
+  // headingKr, not heading: names typed here are usually Korean, and Figtree has no Hangul.
   input: {
-    ...type.heading,
+    ...type.headingKr,
     fontSize: 26,
     color: colors.ink,
     backgroundColor: colors.paperLight,

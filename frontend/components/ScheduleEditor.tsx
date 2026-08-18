@@ -7,7 +7,6 @@ const DAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 import { SNOOZE_OPTIONS, type AlarmSchedule, type SnoozeMinutes } from '../lib/model';
 import { CARD_COLORS, colors, fonts, radius, spacing, type } from '../lib/theme';
 import { parseAlarmTimeOrDefault } from '../lib/time';
-import { Eyebrow } from './ui';
 
 function timeToDate(time: string): Date {
   const { hour, minute } = parseAlarmTimeOrDefault(time);
@@ -21,10 +20,10 @@ function dateToTime(date: Date): string {
 }
 
 const PRESETS = [
-  { label: 'Once', value: 0 },
-  { label: 'Weekdays', value: WEEKDAYS },
-  { label: 'Weekends', value: WEEKEND },
-  { label: 'Every day', value: EVERYDAY },
+  { label: '한 번만', value: 0 },
+  { label: '평일', value: WEEKDAYS },
+  { label: '주말', value: WEEKEND },
+  { label: '매일', value: EVERYDAY },
 ];
 
 /** Time + repeat + snooze. Shared by the room alarm and personal alarms so they behave identically. */
@@ -47,7 +46,7 @@ export function ScheduleEditor({
       />
 
       <View style={styles.block}>
-        <Eyebrow>REPEAT</Eyebrow>
+        <Text style={styles.eyebrowKr}>반복</Text>
         <View style={styles.days}>
           {DAY_LABELS.map((label, index) => {
             const selected = isDaySelected(value.days, index);
@@ -84,7 +83,7 @@ export function ScheduleEditor({
 
       <View style={styles.block}>
         <View style={styles.snoozeHead}>
-          <Eyebrow>SNOOZE</Eyebrow>
+          <Text style={styles.eyebrowKr}>다시 울림</Text>
           <Switch
             value={value.snoozeEnabled}
             onValueChange={(v) => onChange({ ...value, snoozeEnabled: v })}
@@ -103,7 +102,7 @@ export function ScheduleEditor({
                 onPress={() => onChange({ ...value, snoozeMinutes: minutes })}
                 style={[styles.chip, value.snoozeMinutes === minutes && styles.chipOn]}>
                 <Text style={[styles.chipLabel, value.snoozeMinutes === minutes && styles.chipLabelOn]}>
-                  {minutes} min
+                  {minutes}분
                 </Text>
               </Pressable>
             ))}
@@ -116,6 +115,7 @@ export function ScheduleEditor({
 
 const styles = StyleSheet.create({
   container: { gap: spacing.xl },
+  eyebrowKr: { ...type.eyebrowKr, color: colors.inkSoft },
   block: { gap: spacing.md },
   days: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'space-between' },
   day: {
